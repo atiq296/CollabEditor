@@ -1,0 +1,4 @@
+# Ignore node_modules and environment secrets
+node_modules/
+.env
+.DS_Store

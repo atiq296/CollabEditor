@@ -1,14 +1,22 @@
-import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Container, CssBaseline, Typography } from "@mui/material";
+import Signup from "./pages/Signup";
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
 
 function App() {
-  useEffect(() => {
-    fetch('http://localhost:5000/api/ping')
-      .then((res) => res.text())
-      .then((data) => console.log(data))
-      .catch((err) => console.error('Error:', err));
-  }, []);
-
-  return <h1>Hello from React</h1>;
+  return (
+    <BrowserRouter>
+      <CssBaseline />
+      <Container maxWidth="lg">
+        <Routes>
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+        </Routes>
+      </Container>
+    </BrowserRouter>
+  );
 }
 
 export default App;

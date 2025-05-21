@@ -14,6 +14,11 @@ app.use(express.json()); // Parses JSON body
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
 
+//connect document routes
+const documentRoutes = require('./routes/document');
+app.use('/api/document', documentRoutes);
+
+
 // ✅ MONGODB CONNECTION
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✅ MongoDB Connected'))

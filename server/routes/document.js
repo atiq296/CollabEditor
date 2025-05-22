@@ -11,7 +11,7 @@ router.post('/create', authMiddleware, async (req, res) => {
     const newDoc = new Document({
       title,
       createdBy: req.userId,
-      collaborators: [req.userId] // ✅ removed escape slash
+      collaborators: [req.userId]
     });
 
     await newDoc.save();
@@ -30,6 +30,25 @@ router.get('/:id', async (req, res) => {
     res.status(200).json(doc);
   } catch (err) {
     res.status(500).json({ message: "Failed to fetch document", error: err.message });
+  }
+});
+
+// ✅ PUT to update content
+router.put('/:id', authMiddleware, async (req, res) => {
+  try {
+    const { content } = req.body;
+
+    const updatedDoc = await Document.findByIdAndUpdate(
+      req.params.id,
+      { content },
+      { new: true }
+    );
+
+    if (!updatedDoc) return res.status(404).json({ message: 'Document not found' });
+
+    res.status(200).json(updatedDoc);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to update document', error: err.message });
   }
 });
 

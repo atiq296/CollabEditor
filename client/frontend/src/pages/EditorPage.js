@@ -1,48 +1,103 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
+import { io } from "socket.io-client";
 import ReactQuill from "react-quill";
-import { Container, Typography } from "@mui/material";
+import "react-quill/dist/quill.snow.css";
 
 function EditorPage() {
-  const { id } = useParams(); // document ID from URL
-  const [content, setContent] = useState("");
-  const [title, setTitle] = useState("");
+  const { id: documentId } = useParams();
+  const [socket, setSocket] = useState(null);
+  const [quillValue, setQuillValue] = useState("");
+  const quillRef = useRef();
 
-  // Fetch the document from backend
+  // ✅ Connect to backend socket
   useEffect(() => {
-    const fetchDoc = async () => {
-      const token = localStorage.getItem("token");
+    const s = io("http://localhost:5000");
+    setSocket(s);
 
-      const res = await fetch(`http://localhost:5000/api/document/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+    return () => {
+      s.disconnect();
+    };
+  }, []);
 
-      const data = await res.json();
-      if (res.ok) {
-        setTitle(data.title);
-        setContent(data.content);
-      } else {
-        alert("Failed to load document");
-      }
+  // ✅ Join document room
+  useEffect(() => {
+    if (!socket || !documentId) return;
+    socket.emit("join-document", documentId);
+  }, [socket, documentId]);
+
+  // ✅ Receive changes from others
+  useEffect(() => {
+    if (!socket || !quillRef.current) return;
+
+    const quill = quillRef.current.getEditor();
+
+    const handler = (delta) => {
+      quill.updateContents(delta);
     };
 
-    fetchDoc();
-  }, [id]);
+    socket.on("receive-changes", handler);
 
-  const handleChange = (value) => {
-    setContent(value);
-    // You’ll sync this in real time via socket in next step
-  };
+    return () => {
+      socket.off("receive-changes", handler);
+    };
+  }, [socket]);
+
+  // ✅ Send changes when user types
+  useEffect(() => {
+    if (!socket || !quillRef.current) return;
+
+    const quill = quillRef.current.getEditor();
+
+    const handler = (delta, oldDelta, source) => {
+      if (source !== "user") return;
+      socket.emit("send-changes", { documentId, delta });
+    };
+
+    quill.on("text-change", handler);
+
+    return () => {
+      quill.off("text-change", handler);
+    };
+  }, [socket]);
+
+  // ✅ Auto-save every 3 seconds
+  useEffect(() => {
+    if (!documentId || !quillValue) return;
+
+    const interval = setInterval(() => {
+      const token = localStorage.getItem("token");
+
+      fetch(`http://localhost:5000/api/document/${documentId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ content: quillValue }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          console.log("💾 Auto-saved:", data.updatedAt);
+        })
+        .catch((err) => {
+          console.error("❌ Auto-save failed:", err.message);
+        });
+    }, 3000); // every 3 seconds
+
+    return () => clearInterval(interval);
+  }, [documentId, quillValue]);
 
   return (
-    <Container>
-      <Typography variant="h4" sx={{ mt: 4, mb: 2 }}>
-        {title}
-      </Typography>
-      <ReactQuill value={content} onChange={handleChange} />
-    </Container>
+    <div style={{ padding: "2rem" }}>
+      <ReactQuill
+        ref={quillRef}
+        theme="snow"
+        value={quillValue}
+        onChange={setQuillValue}
+        placeholder="Start writing your collaborative document here..."
+      />
+    </div>
   );
 }
 

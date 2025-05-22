@@ -16,32 +16,30 @@ function Dashboard() {
   };
 
   const handleCreateDoc = async () => {
-    const token = localStorage.getItem("token");
+  const token = localStorage.getItem("token");
 
-    try {
-      const res = await fetch("http://localhost:5000/api/document/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ title: "New Document " + Date.now() }),
-      });
+  try {
+    const res = await fetch("http://localhost:5000/api/document/create", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ title: "New Document " + Date.now() }),
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      if (res.ok) {
-        alert("Document Created! Check MongoDB for the ID");
-        console.log("✅ New document created:", data);
-        // Optionally redirect to the editor
-        // navigate(`/editor/${data._id}`);
-      } else {
-        alert("Error: " + data.message);
-      }
-    } catch (err) {
-      alert("Server error");
+    if (res.ok) {
+      navigate(`/editor/${data._id}`);
+
+    } else {
+      alert("Error: " + data.message);
     }
-  };
+  } catch (err) {
+    alert("Server error");
+  }
+};
 
   return (
     <Container maxWidth="sm" sx={{ textAlign: "center", mt: 10 }}>

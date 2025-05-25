@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import './DocumentEditor.css'; // Custom styles (next step)
+import './DocumentEditor.css';
+import ChatPanel from './ChatPanel';
 
-function DocumentEditor() {
+function DocumentEditor({ docId, user }) {
   const [content, setContent] = useState('');
 
   const handleChange = (value) => {
@@ -11,25 +12,31 @@ function DocumentEditor() {
   };
 
   const handleSave = () => {
-    console.log("Document content:", content);
-    // Later: Send to backend to save in MongoDB
+    console.log('Document content:', content);
+    // TODO: Send content to backend to save in MongoDB
   };
 
   return (
-    <div className="editor-wrapper">
-      <div className="editor-header">
-        <h2>CollabEditor - Document Editor</h2>
-        <button className="save-btn" onClick={handleSave}>Save</button>
+    <div className="editor-wrapper" style={{ display: 'flex', height: '100vh' }}>
+      <div className="editor-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div className="editor-header">
+          <h2>CollabEditor - Document Editor</h2>
+          <button className="save-btn" onClick={handleSave}>Save</button>
+        </div>
+        <ReactQuill
+          theme="snow"
+          value={content}
+          onChange={handleChange}
+          placeholder="Start typing here..."
+          modules={DocumentEditor.modules}
+          formats={DocumentEditor.formats}
+          style={{ flex: 1 }}
+        />
       </div>
-
-      <ReactQuill
-        theme="snow"
-        value={content}
-        onChange={handleChange}
-        placeholder="Start typing here..."
-        modules={DocumentEditor.modules}
-        formats={DocumentEditor.formats}
-      />
+      {/* Chat sidebar */}
+      {docId && user && (
+        <ChatPanel documentId={docId} user={user} />
+      )}
     </div>
   );
 }
@@ -37,11 +44,11 @@ function DocumentEditor() {
 // Toolbar settings
 DocumentEditor.modules = {
   toolbar: [
-    [{ 'header': [1, 2, 3, false] }],
+    [{ header: [1, 2, 3, false] }],
     ['bold', 'italic', 'underline', 'strike'],
-    [{ 'color': [] }, { 'background': [] }],
-    [{ 'align': [] }],
-    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+    [{ color: [] }, { background: [] }],
+    [{ align: [] }],
+    [{ list: 'ordered' }, { list: 'bullet' }],
     ['link', 'image'],
     ['clean']
   ],

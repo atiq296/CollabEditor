@@ -11,12 +11,10 @@ function Login() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  // Updates the state when user types
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Runs when the form is submitted
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -31,11 +29,11 @@ function Login() {
       const data = await res.json();
 
       if (res.ok) {
-        // Save token and redirect to dashboard
+        // ✅ Save token and user name
         localStorage.setItem("token", data.token);
+        localStorage.setItem("username", data.user.name);
         navigate("/dashboard");
       } else {
-        // Show error returned by backend
         setError(data.message || "Login failed");
       }
     } catch (err) {
@@ -45,12 +43,24 @@ function Login() {
 
   return (
     <Container maxWidth="xs" sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
-      <form onSubmit={handleSubmit} style={{ background: "white", padding: "2rem", borderRadius: "8px", boxShadow: "0 0 10px rgba(0,0,0,0.1)" }}>
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          background: "white",
+          padding: "2rem",
+          borderRadius: "8px",
+          boxShadow: "0 0 10px rgba(0,0,0,0.1)"
+        }}
+      >
         <Typography variant="h5" align="center" gutterBottom>
           Login to Your Account
         </Typography>
 
-        {error && <Typography color="error" variant="body2" align="center">{error}</Typography>}
+        {error && (
+          <Typography color="error" variant="body2" align="center">
+            {error}
+          </Typography>
+        )}
 
         <TextField
           label="Email"

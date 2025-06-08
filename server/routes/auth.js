@@ -6,28 +6,23 @@ const User = require('../models/User');
 
 // ====================== SIGNUP ======================
 router.post('/signup', async (req, res) => {
-  console.log("📩 Received signup data:", req.body);  // Debug log
+  console.log("📩 Received signup data:", req.body);
 
   const { name, email, password, role } = req.body;
 
-  // Validate input
   if (!name || !email || !password) {
     console.log("❌ Missing fields in signup");
     return res.status(400).json({ message: "Please fill in all required fields" });
   }
-  console.log("🚀 Signup route is live");
 
   try {
-    // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create new user
     const newUser = new User({
       name,
       email,
@@ -37,10 +32,12 @@ router.post('/signup', async (req, res) => {
 
     await newUser.save();
 
-    // Generate JWT token
-    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, {
-      expiresIn: '2h'
-    });
+    // ✅ Include name in the JWT token
+    const token = jwt.sign(
+      { id: newUser._id, name: newUser.name },
+      process.env.JWT_SECRET,
+      { expiresIn: '2h' }
+    );
 
     console.log("✅ New user registered:", newUser.email);
 
@@ -55,10 +52,9 @@ router.post('/signup', async (req, res) => {
     });
 
   } catch (err) {
-  console.error("❌ Signup failed with error:", err);
-  res.status(500).json({ message: 'Signup failed', error: err.message || err });
-}
-
+    console.error("❌ Signup failed with error:", err);
+    res.status(500).json({ message: 'Signup failed', error: err.message || err });
+  }
 });
 
 
@@ -68,7 +64,6 @@ router.post('/login', async (req, res) => {
 
   const { email, password } = req.body;
 
-  // Validate input
   if (!email || !password) {
     return res.status(400).json({ message: "Please enter email and password" });
   }
@@ -80,9 +75,12 @@ router.post('/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ message: 'Incorrect password' });
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: '2h'
-    });
+    // ✅ Include name in the JWT token
+    const token = jwt.sign(
+      { id: user._id, name: user.name },
+      process.env.JWT_SECRET,
+      { expiresIn: '2h' }
+    );
 
     console.log("✅ Login successful:", user.email);
 

@@ -5,14 +5,17 @@ import {
   Typography,
   Alert,
   CircularProgress,
+  Button,
 } from "@mui/material";
-
 import Handsontable from "handsontable";
 import { HotTable } from "@handsontable/react";
 import { registerAllModules } from "handsontable/registry";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 import "handsontable/dist/handsontable.full.min.css";
 
-registerAllModules(); // mergeCells, dropdownMenu, formulas, etc.
+// ✅ Register all Handsontable plugins
+registerAllModules();
 
 function SpreadsheetPage() {
   const { id: documentId } = useParams();
@@ -29,6 +32,7 @@ function SpreadsheetPage() {
     }
   };
 
+  // 🔹 Fetch spreadsheet and permission data
   useEffect(() => {
     const token = getToken();
     const userId = getUserId();
@@ -40,9 +44,9 @@ function SpreadsheetPage() {
       .then((doc) => {
         setIsEditor(
           doc.createdBy === userId ||
-          doc.collaborators?.some(
-            (c) => c.user._id === userId && c.role === "Editor"
-          )
+            doc.collaborators?.some(
+              (c) => c.user._id === userId && c.role === "Editor"
+            )
         );
       });
 
@@ -52,8 +56,10 @@ function SpreadsheetPage() {
       .then((res) => res.json())
       .then((fetchedData) => {
         if (!Array.isArray(fetchedData) || fetchedData.length === 0) {
-          const empty = Array.from({ length: 20 }, () =>
-            Array.from({ length: 10 }, () => "")
+          const rows = 20,
+            cols = 10;
+          const empty = Array.from({ length: rows }, () =>
+            Array.from({ length: cols }, () => "")
           );
           setData(empty);
         } else {
@@ -63,6 +69,7 @@ function SpreadsheetPage() {
       });
   }, [documentId]);
 
+  // 🔄 Auto-save every 3 seconds
   useEffect(() => {
     if (!isEditor) return;
 
@@ -80,6 +87,25 @@ function SpreadsheetPage() {
     return () => clearInterval(interval);
   }, [data, documentId, isEditor]);
 
+  // ✅ Export to Excel
+  const handleExportToExcel = () => {
+    if (!data || data.length === 0) return;
+
+    const worksheet = XLSX.utils.aoa_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+    });
+    const fileData = new Blob([excelBuffer], {
+      type:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
+    });
+    saveAs(fileData, `spreadsheet_${documentId}.xlsx`);
+  };
+
   if (loading) return <CircularProgress sx={{ mt: 4 }} />;
 
   return (
@@ -94,6 +120,16 @@ function SpreadsheetPage() {
         </Alert>
       )}
 
+      <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
+        <Button
+          variant="contained"
+          color="success"
+          onClick={handleExportToExcel}
+        >
+          📤 Export to Excel
+        </Button>
+      </Box>
+
       <HotTable
         data={data}
         colHeaders
@@ -103,20 +139,17 @@ function SpreadsheetPage() {
         height="75vh"
         stretchH="all"
         licenseKey="non-commercial-and-evaluation"
-
         contextMenu={isEditor}
         dropdownMenu={isEditor}
         mergeCells={true}
-        manualRowResize={true}
-        manualColumnResize={true}
+        filters={true}
+        manualRowResize
+        manualColumnResize
         autoWrapRow
         autoWrapCol
-        formulas={true}
-        filters={false} // ❌ DISABLED to prevent crash
-
         afterChange={(changes) => {
           if (changes) {
-            setData((prev) => [...prev]);
+            setData((prev) => [...prev]); // trigger save
           }
         }}
       />

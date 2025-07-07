@@ -159,4 +159,50 @@ router.post('/:id/comment', authMiddleware, async (req, res) => {
   }
 });
 
+// ... existing requires
+// Add below routes at the end before module.exports
+
+// ✅ Get spreadsheet data
+router.get('/:id/spreadsheet', authMiddleware, async (req, res) => {
+  try {
+    const doc = await Document.findById(req.params.id);
+    if (!doc) return res.status(404).json({ message: "Document not found" });
+
+    const isAllowed = doc.createdBy.equals(req.userId) ||
+      doc.collaborators.some(c =>
+        c.user.equals(req.userId) && (c.role === 'Editor' || c.role === 'Viewer')
+      );
+
+    if (!isAllowed) return res.status(403).json({ message: "Access denied" });
+
+    res.status(200).json(doc.spreadsheet?.data || []);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch spreadsheet", error: err.message });
+  }
+});
+
+// ✅ Save spreadsheet data
+router.put('/:id/spreadsheet', authMiddleware, async (req, res) => {
+  const { data } = req.body;
+
+  try {
+    const doc = await Document.findById(req.params.id);
+    if (!doc) return res.status(404).json({ message: "Document not found" });
+
+    const isEditor = doc.createdBy.equals(req.userId) ||
+      doc.collaborators.some(c => c.user.equals(req.userId) && c.role === 'Editor');
+
+    if (!isEditor) return res.status(403).json({ message: "No permission to update" });
+
+    doc.spreadsheet.data = data;
+    doc.spreadsheet.updatedAt = Date.now();
+    await doc.save();
+
+    res.status(200).json({ message: "Spreadsheet saved" });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to save spreadsheet", error: err.message });
+  }
+});
+
+
 module.exports = router;

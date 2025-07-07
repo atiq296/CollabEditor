@@ -8,6 +8,7 @@ import {
   ListItem,
   ListItemText,
   Divider,
+  Stack,
 } from "@mui/material";
 
 function Dashboard() {
@@ -22,7 +23,7 @@ function Dashboard() {
     } else {
       fetch("http://localhost:5000/api/document/mydocs", {
         headers: {
-          Authorization: `Bearer ${token}`, // ✅ Proper format
+          Authorization: `Bearer ${token}`,
         },
       })
         .then((res) => res.json())
@@ -31,7 +32,7 @@ function Dashboard() {
             setMyDocs(data);
           } else {
             console.error("⚠️ Unexpected response:", data);
-            setMyDocs([]); // fallback
+            setMyDocs([]);
           }
         })
         .catch((err) => {
@@ -54,7 +55,7 @@ function Dashboard() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`, // ✅ Proper format
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ title: "New Document " + Date.now() }),
       });
@@ -62,7 +63,7 @@ function Dashboard() {
       const data = await res.json();
 
       if (res.ok) {
-        setMyDocs((prev) => [data, ...prev]); // update UI immediately
+        setMyDocs((prev) => [data, ...prev]);
         navigate(`/editor/${data._id}`);
       } else {
         alert("Error: " + data.message);
@@ -71,6 +72,33 @@ function Dashboard() {
       alert("Server error");
     }
   };
+
+  const handleCreateSpreadsheet = async () => {
+  const token = localStorage.getItem("token");
+
+  try {
+    const res = await fetch("http://localhost:5000/api/document/create", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ title: "New Spreadsheet " + Date.now() }),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      setMyDocs((prev) => [data, ...prev]);
+      navigate(`/spreadsheet/${data._id}`); // go to spreadsheet
+    } else {
+      alert("Error: " + data.message);
+    }
+  } catch (err) {
+    alert("Server error");
+  }
+};
+
 
   return (
     <Container maxWidth="sm" sx={{ textAlign: "center", mt: 10 }}>
@@ -89,6 +117,15 @@ function Dashboard() {
       >
         ➕ Create New Document
       </Button>
+      <Button
+        variant="outlined"
+        color="secondary"
+        onClick={handleCreateSpreadsheet}
+        sx={{ mb: 2 }}
+>
+        🧮 Create Spreadsheet
+      </Button>
+
 
       <Typography variant="h6" align="left" sx={{ mt: 4 }}>
         📄 Your Documents:
@@ -98,12 +135,30 @@ function Dashboard() {
         <List>
           {myDocs.map((doc) => (
             <div key={doc._id}>
-              <ListItem button component={Link} to={`/editor/${doc._id}`}>
+              <ListItem>
                 <ListItemText
                   primary={doc.title}
                   secondary={new Date(doc.updatedAt).toLocaleString()}
                 />
               </ListItem>
+              <Stack direction="row" spacing={2} sx={{ mb: 1, ml: 2 }}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  component={Link}
+                  to={`/editor/${doc._id}`}
+                >
+                  ✍️ Open Editor
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  component={Link}
+                  to={`/spreadsheet/${doc._id}`}
+                >
+                  📊 Open Spreadsheet
+                </Button>
+              </Stack>
               <Divider />
             </div>
           ))}

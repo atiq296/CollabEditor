@@ -22,7 +22,12 @@ const DocumentSchema = new mongoose.Schema({
       },
       createdAt: { type: Date, default: Date.now }
     }
-  ]
+  ],
+
+  spreadsheet: {
+    data: { type: Array, default: [] },
+    updatedAt: { type: Date, default: Date.now }
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Document', DocumentSchema);

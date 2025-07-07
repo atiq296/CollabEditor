@@ -15,6 +15,7 @@ import {
   MenuItem,
   InputLabel,
   FormControl,
+  CircularProgress,
 } from "@mui/material";
 
 function EditorPage() {
@@ -30,10 +31,13 @@ function EditorPage() {
   const [shareRole, setShareRole] = useState("Viewer");
   const [roleModalOpen, setRoleModalOpen] = useState(false);
   const [title, setTitle] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
   const quillRef = useRef();
 
+  const getToken = () => localStorage.getItem("token") || "";
+
   const getUsername = () => {
-    const token = localStorage.getItem("token");
+    const token = getToken();
     if (!token) return "Unknown";
     try {
       const payload = JSON.parse(atob(token.split(".")[1]));
@@ -42,6 +46,57 @@ function EditorPage() {
       return "User";
     }
   };
+
+const fetchAIResult = async (inputText, instruction) => {
+  setAiLoading(true);
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+         "Authorization": "Bearer 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",
+
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "mistralai/mistral-7b-instruct",
+        messages: [
+          { role: "system", content: instruction },
+          { role: "user", content: inputText }
+        ]
+      })
+    });
+
+    const json = await response.json();
+    setAiLoading(false);
+    return json.choices?.[0]?.message?.content || inputText;
+  } catch (err) {
+    console.error("❌ OpenRouter error:", err);
+    setAiLoading(false);
+    return inputText;
+  }
+};
+
+
+
+const handleImproveGrammar = async () => {
+  const plainText = quillRef.current.getEditor().getText();
+  const improved = await fetchAIResult(
+    plainText,
+    "Fix grammar, punctuation, and fluency. Return only the corrected version without explanation:"
+
+  );
+  if (improved) setQuillValue(improved);
+};
+
+const handleEnhanceTone = async () => {
+  const plainText = quillRef.current.getEditor().getText();
+  const improved = await fetchAIResult(
+    plainText,
+    "Rewrite this text to make it more professional and engaging in tone:"
+  );
+  if (improved) setQuillValue(improved);
+};
+
 
   useEffect(() => {
     const s = io("http://localhost:5000");
@@ -60,17 +115,15 @@ function EditorPage() {
   }, [socket, documentId]);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
     fetch(`http://localhost:5000/api/document/${documentId}`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${getToken()}` },
     })
       .then((res) => res.json())
       .then((data) => {
         if (data?.content) setQuillValue(data.content);
         if (data?.comments) setComments(data.comments);
         if (data?.title) setTitle(data.title);
-      })
-      .catch((err) => console.error("❌ Load failed:", err));
+      });
   }, [documentId]);
 
   useEffect(() => {
@@ -94,22 +147,23 @@ function EditorPage() {
   }, [socket]);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
     const interval = setInterval(() => {
-      if (quillValue) {
-        const autoTitle = title.trim() || quillValue.replace(/<[^>]+>/g, "").slice(0, 30) || "Untitled";
-        fetch(`http://localhost:5000/api/document/${documentId}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ content: quillValue, title: autoTitle }),
-        });
-      }
+      const token = getToken();
+      const autoTitle =
+        title.trim() ||
+        quillValue.replace(/<[^>]+>/g, "").slice(0, 30) ||
+        "Untitled";
+      fetch(`http://localhost:5000/api/document/${documentId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ content: quillValue, title: autoTitle }),
+      });
     }, 3000);
     return () => clearInterval(interval);
-  }, [quillValue, documentId, title]);
+  }, [quillValue, title, documentId]);
 
   useEffect(() => {
     const quill = quillRef.current?.getEditor();
@@ -125,59 +179,60 @@ function EditorPage() {
   }, []);
 
   const handleCommentSubmit = async () => {
-    const token = localStorage.getItem("token");
-    try {
-      const res = await fetch(`http://localhost:5000/api/document/${documentId}/comment`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ text: newCommentText, position: selectedRange }),
-      });
-      const data = await res.json();
-      setComments((prev) => [...prev, {
+    const token = getToken();
+    await fetch(`http://localhost:5000/api/document/${documentId}/comment`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ text: newCommentText, position: selectedRange }),
+    });
+    setComments((prev) => [
+      ...prev,
+      {
         text: newCommentText,
         author: { name: getUsername() },
         position: selectedRange,
         createdAt: new Date().toISOString(),
-      }]);
-      setNewCommentText("");
-      setShowCommentModal(false);
-    } catch (err) {
-      alert("❌ Failed to save comment");
-    }
+      },
+    ]);
+    setNewCommentText("");
+    setShowCommentModal(false);
   };
 
   const handleShare = async () => {
-    const token = localStorage.getItem("token");
-    try {
-      const res = await fetch(`http://localhost:5000/api/document/${documentId}/share`, {
+    const token = getToken();
+    const res = await fetch(
+      `http://localhost:5000/api/document/${documentId}/share`,
+      {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ email: shareEmail, role: shareRole }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        alert("✅ Document shared!");
-        setShareEmail("");
-        setShareRole("Viewer");
-        setRoleModalOpen(false);
-      } else {
-        alert("❌ " + data.message);
       }
-    } catch (err) {
-      alert("❌ Failed to share");
+    );
+    const data = await res.json();
+    if (res.ok) {
+      alert("✅ Document shared!");
+      setShareEmail("");
+      setShareRole("Viewer");
+      setRoleModalOpen(false);
+    } else {
+      alert("❌ " + data.message);
     }
   };
 
   return (
     <div style={{ padding: "2rem" }}>
       <Typography variant="h6">👥 Active Users:</Typography>
-      <ul>{activeUsers.map((u, i) => <li key={i}>✅ {u}</li>)}</ul>
+      <ul>
+        {activeUsers.map((u, i) => (
+          <li key={i}>✅ {u}</li>
+        ))}
+      </ul>
 
       <TextField
         fullWidth
@@ -188,30 +243,49 @@ function EditorPage() {
         sx={{ mb: 2 }}
       />
 
-      <Button variant="contained" color="primary" sx={{ mr: 2 }} onClick={() => setRoleModalOpen(true)}>
-        ➕ Share Document
-      </Button>
-
-      <Button
-        variant="contained"
-        color="success"
-        sx={{ my: 2 }}
-        onClick={async () => {
-          const token = localStorage.getItem("token");
-          const autoTitle = title.trim() || quillValue.replace(/<[^>]+>/g, "").slice(0, 30) || "Untitled";
-          const res = await fetch(`http://localhost:5000/api/document/${documentId}`, {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ content: quillValue, title: autoTitle }),
-          });
-          if (res.ok) alert("💾 Saved!");
-        }}
-      >
-        💾 Save Document
-      </Button>
+      <Box sx={{ mb: 2 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          sx={{ mr: 1 }}
+          onClick={() => setRoleModalOpen(true)}
+        >
+          ➕ Share Document
+        </Button>
+        <Button
+          variant="contained"
+          color="success"
+          sx={{ mr: 1 }}
+          onClick={() => {
+            const autoTitle =
+              title.trim() ||
+              quillValue.replace(/<[^>]+>/g, "").slice(0, 30) ||
+              "Untitled";
+            fetch(`http://localhost:5000/api/document/${documentId}`, {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${getToken()}`,
+              },
+              body: JSON.stringify({ content: quillValue, title: autoTitle }),
+            });
+          }}
+        >
+          💾 Save Document
+        </Button>
+        <Button variant="outlined" onClick={handleImproveGrammar} disabled={aiLoading}>
+          ✍️ Improve Grammar
+        </Button>
+        <Button
+          variant="outlined"
+          onClick={handleEnhanceTone}
+          sx={{ ml: 1 }}
+          disabled={aiLoading}
+        >
+          🎯 Enhance Tone
+        </Button>
+        {aiLoading && <CircularProgress size={20} sx={{ ml: 2 }} />}
+      </Box>
 
       <ReactQuill
         ref={quillRef}
@@ -239,7 +313,7 @@ function EditorPage() {
         </Box>
       </Modal>
 
-      {/* Comments */}
+      {/* Comments List */}
       <Typography variant="h6" sx={{ mt: 4 }}>💬 Comments:</Typography>
       <List>
         {comments.map((c, i) => (
@@ -279,3 +353,4 @@ function EditorPage() {
 }
 
 export default EditorPage;
+

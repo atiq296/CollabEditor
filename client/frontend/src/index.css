@@ -1,1 +1,7 @@
 @import "react-quill/dist/quill.snow.css";
+.htBold {
+  font-weight: bold;
+}
+.htItalic {
+  font-style: italic;
+}

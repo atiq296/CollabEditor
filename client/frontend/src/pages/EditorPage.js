@@ -97,6 +97,17 @@ const handleEnhanceTone = async () => {
   if (improved) setQuillValue(improved);
 };
 
+const handleExportToPDF = () => {
+  const element = document.querySelector(".ql-editor");
+  if (!element) return;
+
+  import("html2pdf.js").then((html2pdf) => {
+    html2pdf.default().from(element).save(`${title || "Document"}.pdf`);
+  });
+};
+
+
+
 
   useEffect(() => {
     const s = io("http://localhost:5000");
@@ -287,6 +298,16 @@ const handleEnhanceTone = async () => {
         {aiLoading && <CircularProgress size={20} sx={{ ml: 2 }} />}
       </Box>
 
+       <Button
+          variant="outlined"
+          color="secondary"
+          sx={{ ml: 1 }}
+          onClick={handleExportToPDF}
+        >
+          📄 Export to PDF
+        </Button>
+
+
       <ReactQuill
         ref={quillRef}
         theme="snow"
@@ -345,7 +366,7 @@ const handleEnhanceTone = async () => {
               <MenuItem value="Viewer">Viewer</MenuItem>
             </Select>
           </FormControl>
-          <Button variant="contained" onClick={handleShare}>Share</Button>
+        
         </Box>
       </Modal>
     </div>

@@ -1,0 +1,177 @@
+/* Homepage Styles */
+.homepage-root {
+  min-height: 100vh;
+  width: 100vw;
+  background: linear-gradient(135deg, #0a2342 0%, #274690 100%);
+  color: #1a2342;
+  font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+}
+.homepage-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2rem 3rem 1.5rem 3rem;
+  box-sizing: border-box;
+}
+.homepage-logo {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 2px;
+  text-shadow: 0 2px 12px rgba(10,35,66,0.18);
+}
+.homepage-header-buttons {
+  display: flex;
+  gap: 1rem;
+}
+.homepage-login-btn {
+  background: linear-gradient(90deg, #274690 0%, #0a2342 100%) !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px 0 rgba(39, 70, 144, 0.10);
+  transition: background 0.3s, transform 0.2s, box-shadow 0.2s;
+}
+.homepage-login-btn:hover {
+  background: linear-gradient(90deg, #0a2342 0%, #274690 100%) !important;
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 4px 16px 0 rgba(39, 70, 144, 0.18);
+}
+.homepage-signup-btn {
+  border-color: #fff !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.homepage-signup-btn:hover {
+  background: #fff !important;
+  color: #274690 !important;
+  border-color: #274690 !important;
+}
+.homepage-main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1rem 3rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.homepage-hero {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 2.5rem;
+  margin-bottom: 2.5rem;
+  flex-wrap: wrap;
+}
+.homepage-hero-images {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+.doc-icon, .sheet-icon {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 4px 16px 0 rgba(39, 70, 144, 0.10);
+  padding: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.homepage-hero-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: 350px;
+}
+.homepage-hero-text h1 {
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 0.5rem;
+  letter-spacing: 2px;
+}
+.homepage-tagline {
+  color: #e3eafc;
+  font-size: 1.2rem;
+  font-weight: 500;
+  margin-bottom: 0;
+}
+.homepage-about, .homepage-features, .homepage-team {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 2px 8px 0 rgba(39, 70, 144, 0.10);
+  padding: 2rem 2rem 1.5rem 2rem;
+  margin-bottom: 2rem;
+  width: 100%;
+  max-width: 700px;
+}
+.homepage-about h2, .homepage-features h2, .homepage-team h2 {
+  color: #274690;
+  font-weight: 800;
+  margin-bottom: 0.7rem;
+}
+.homepage-about p, .homepage-features ul, .homepage-team-list {
+  color: #1a2342;
+  font-size: 1.08rem;
+}
+.homepage-features ul {
+  padding-left: 1.2rem;
+  margin: 0.5rem 0 0 0;
+}
+.homepage-features li {
+  margin-bottom: 0.4rem;
+  font-size: 1.08rem;
+}
+.homepage-team-list {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+.team-member {
+  background: #e3eafc;
+  color: #274690;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 0.7rem 1.2rem;
+  font-size: 1rem;
+  box-shadow: 0 1px 4px 0 rgba(39, 70, 144, 0.08);
+}
+.homepage-app-areas, .homepage-tech-stack {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 2px 8px 0 rgba(39, 70, 144, 0.10);
+  padding: 2rem 2rem 1.5rem 2rem;
+  margin-bottom: 2rem;
+  width: 100%;
+  max-width: 700px;
+}
+@media (max-width: 700px) {
+  .homepage-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.2rem;
+    padding: 1.2rem 1rem 1rem 1rem;
+  }
+  .homepage-main {
+    padding: 1.2rem 0.2rem 2rem 0.2rem;
+  }
+  .homepage-hero {
+    flex-direction: column;
+    gap: 1.2rem;
+    margin-bottom: 1.5rem;
+  }
+  .homepage-hero-text {
+    align-items: center;
+    text-align: center;
+  }
+  .homepage-about, .homepage-features, .homepage-team {
+    padding: 1.2rem 0.7rem 1rem 0.7rem;
+    max-width: 98vw;
+  }
+} 

@@ -5,11 +5,15 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import EditorPage from "./pages/EditorPage";
 import SpreadsheetPage from "./pages/SpreadsheetPage"; // ✅ New import
+import HomePage from "./pages/HomePage";
 
 function App() {
   return (
     <BrowserRouter>
       <CssBaseline />
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+      </Routes>
       <Container maxWidth="lg">
         <Routes>
           <Route path="/signup" element={<Signup />} />

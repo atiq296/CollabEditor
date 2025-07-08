@@ -3,13 +3,13 @@ import { useNavigate, Link } from "react-router-dom";
 import {
   Typography,
   Button,
-  Container,
   List,
   ListItem,
   ListItemText,
   Divider,
   Stack,
 } from "@mui/material";
+import "./Dashboard.css";
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -17,7 +17,6 @@ function Dashboard() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-
     if (!token) {
       navigate("/login");
     } else {
@@ -49,7 +48,6 @@ function Dashboard() {
 
   const handleCreateDoc = async () => {
     const token = localStorage.getItem("token");
-
     try {
       const res = await fetch("http://localhost:5000/api/document/create", {
         method: "POST",
@@ -59,9 +57,7 @@ function Dashboard() {
         },
         body: JSON.stringify({ title: "New Document " + Date.now() }),
       });
-
       const data = await res.json();
-
       if (res.ok) {
         setMyDocs((prev) => [data, ...prev]);
         navigate(`/editor/${data._id}`);
@@ -74,110 +70,108 @@ function Dashboard() {
   };
 
   const handleCreateSpreadsheet = async () => {
-  const token = localStorage.getItem("token");
-
-  try {
-    const res = await fetch("http://localhost:5000/api/document/create", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ title: "New Spreadsheet " + Date.now() }),
-    });
-
-    const data = await res.json();
-
-    if (res.ok) {
-      setMyDocs((prev) => [data, ...prev]);
-      navigate(`/spreadsheet/${data._id}`); // go to spreadsheet
-    } else {
-      alert("Error: " + data.message);
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch("http://localhost:5000/api/document/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ title: "New Spreadsheet " + Date.now() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMyDocs((prev) => [data, ...prev]);
+        navigate(`/spreadsheet/${data._id}`);
+      } else {
+        alert("Error: " + data.message);
+      }
+    } catch (err) {
+      alert("Server error");
     }
-  } catch (err) {
-    alert("Server error");
-  }
-};
-
+  };
 
   return (
-    <Container maxWidth="sm" sx={{ textAlign: "center", mt: 10 }}>
-      <Typography variant="h4" gutterBottom>
-        Welcome to the Dashboard 👋
-      </Typography>
-      <Typography variant="body1" gutterBottom>
-        You are successfully logged in!
-      </Typography>
-
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={handleCreateDoc}
-        sx={{ mt: 3, mb: 2 }}
-      >
-        ➕ Create New Document
-      </Button>
-      <Button
-        variant="outlined"
-        color="secondary"
-        onClick={handleCreateSpreadsheet}
-        sx={{ mb: 2 }}
->
-        🧮 Create Spreadsheet
-      </Button>
-
-
-      <Typography variant="h6" align="left" sx={{ mt: 4 }}>
-        📄 Your Documents:
-      </Typography>
-
-      {Array.isArray(myDocs) && myDocs.length > 0 ? (
-        <List>
-          {myDocs.map((doc) => (
-            <div key={doc._id}>
-              <ListItem>
-                <ListItemText
-                  primary={doc.title}
-                  secondary={new Date(doc.updatedAt).toLocaleString()}
-                />
-              </ListItem>
-              <Stack direction="row" spacing={2} sx={{ mb: 1, ml: 2 }}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  component={Link}
-                  to={`/editor/${doc._id}`}
-                >
-                  ✍️ Open Editor
-                </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  component={Link}
-                  to={`/spreadsheet/${doc._id}`}
-                >
-                  📊 Open Spreadsheet
-                </Button>
-              </Stack>
-              <Divider />
-            </div>
-          ))}
-        </List>
-      ) : (
-        <Typography variant="body2" sx={{ mt: 2 }}>
-          You haven’t created any documents yet.
+    <div className="dashboard-root">
+      <header className="dashboard-header">
+        <div className="dashboard-title">Dashboard</div>
+        <Button
+          variant="contained"
+          color="error"
+          className="dashboard-logout-btn"
+          onClick={handleLogout}
+        >
+          Log Out
+        </Button>
+      </header>
+      <main className="dashboard-main-box">
+        <Typography variant="h4" className="dashboard-welcome" gutterBottom>
+          Welcome to CollabEditor 👋
         </Typography>
-      )}
-
-      <Button
-        variant="contained"
-        color="error"
-        onClick={handleLogout}
-        sx={{ mt: 4 }}
-      >
-        Log Out
-      </Button>
-    </Container>
+        <Typography variant="body1" className="dashboard-subtext" gutterBottom>
+          You are successfully logged in!
+        </Typography>
+        <div className="dashboard-actions">
+          <Button
+            variant="contained"
+            color="primary"
+            className="dashboard-create-btn"
+            onClick={handleCreateDoc}
+          >
+            ➕ Create New Document
+          </Button>
+          <Button
+            variant="outlined"
+            color="secondary"
+            className="dashboard-create-btn"
+            onClick={handleCreateSpreadsheet}
+          >
+            🧮 Create Spreadsheet
+          </Button>
+        </div>
+        <Typography variant="h6" className="dashboard-docs-title" align="left">
+          📄 Your Documents:
+        </Typography>
+        {Array.isArray(myDocs) && myDocs.length > 0 ? (
+          <List className="dashboard-doc-list">
+            {myDocs.map((doc) => (
+              <div key={doc._id} className="dashboard-doc-item">
+                <ListItem>
+                  <ListItemText
+                    primary={doc.title}
+                    secondary={new Date(doc.updatedAt).toLocaleString()}
+                  />
+                </ListItem>
+                <Stack direction="row" spacing={2} className="dashboard-doc-actions">
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    component={Link}
+                    to={`/editor/${doc._id}`}
+                  >
+                    ✍️ Open Editor
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    component={Link}
+                    to={`/spreadsheet/${doc._id}`}
+                  >
+                    📊 Open Spreadsheet
+                  </Button>
+                </Stack>
+                <Divider />
+              </div>
+            ))}
+          </List>
+        ) : (
+          <Typography variant="body2" className="dashboard-empty-text">
+            You haven't created any documents yet.
+          </Typography>
+        )}
+      </main>
+    </div>
   );
 }
 

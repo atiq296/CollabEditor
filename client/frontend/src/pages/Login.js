@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { TextField, Button, Typography, Container } from "@mui/material";
+import "./Login.css";
+import CollabEditorLogo from "./CollabEditorLogo";
 
 function Login() {
   const [formData, setFormData] = useState({
@@ -42,59 +44,79 @@ function Login() {
   };
 
   return (
-    <Container maxWidth="xs" sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          background: "white",
-          padding: "2rem",
-          borderRadius: "8px",
-          boxShadow: "0 0 10px rgba(0,0,0,0.1)"
-        }}
-      >
-        <Typography variant="h5" align="center" gutterBottom>
-          Login to Your Account
-        </Typography>
-
-        {error && (
-          <Typography color="error" variant="body2" align="center">
-            {error}
-          </Typography>
-        )}
-
-        <TextField
-          label="Email"
-          type="email"
-          name="email"
-          value={formData.email}
-          onChange={handleChange}
-          fullWidth
-          required
-          margin="normal"
-        />
-
-        <TextField
-          label="Password"
-          type="password"
-          name="password"
-          value={formData.password}
-          onChange={handleChange}
-          fullWidth
-          required
-          margin="normal"
-        />
-
-        <Button
-          type="submit"
-          variant="contained"
-          color="primary"
-          fullWidth
-          sx={{ mt: 2 }}
+    <div className="login-root">
+      <div className="logo-svg-container">
+        <CollabEditorLogo style={{ maxWidth: 340, width: "90%", display: "block", margin: "0 auto" }} />
+      </div>
+      <Container maxWidth="xs" className="login-container">
+        <form
+          onSubmit={handleSubmit}
+          className="login-form animate-fade-in"
         >
-          Log In
-        </Button>
-      </form>
-    </Container>
+          <Typography variant="h5" align="center" gutterBottom className="login-title">
+            Login to Your Account
+          </Typography>
+
+          {error && (
+            <Typography color="error" variant="body2" align="center" className="login-error">
+              {error}
+            </Typography>
+          )}
+
+          <TextField
+            label="Email"
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            fullWidth
+            required
+            margin="normal"
+            className="login-input"
+            InputProps={{
+              className: "login-input-inner"
+            }}
+          />
+
+          <TextField
+            label="Password"
+            type="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            fullWidth
+            required
+            margin="normal"
+            className="login-input"
+            InputProps={{
+              className: "login-input-inner"
+            }}
+          />
+
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            fullWidth
+            className="login-button"
+            sx={{ mt: 2 }}
+          >
+            Log In
+          </Button>
+
+          <Button
+            variant="outlined"
+            color="primary"
+            fullWidth
+            className="signup-button"
+            sx={{ mt: 2 }}
+            onClick={() => navigate("/signup")}
+          >
+            New user? Sign Up
+          </Button>
+        </form>
+      </Container>
+    </div>
   );
 }
 

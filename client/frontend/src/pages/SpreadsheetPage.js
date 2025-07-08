@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -13,12 +13,14 @@ import { registerAllModules } from "handsontable/registry";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import "handsontable/dist/handsontable.full.min.css";
+import "./SpreadsheetPage.css";
+import { HyperFormula } from "hyperformula";
 
-// ✅ Register all Handsontable plugins
 registerAllModules();
 
 function SpreadsheetPage() {
   const { id: documentId } = useParams();
+  const navigate = useNavigate();
   const [data, setData] = useState([]);
   const [isEditor, setIsEditor] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -32,7 +34,6 @@ function SpreadsheetPage() {
     }
   };
 
-  // 🔹 Fetch spreadsheet and permission data
   useEffect(() => {
     const token = getToken();
     const userId = getUserId();
@@ -69,10 +70,8 @@ function SpreadsheetPage() {
       });
   }, [documentId]);
 
-  // 🔄 Auto-save every 3 seconds
   useEffect(() => {
     if (!isEditor) return;
-
     const interval = setInterval(() => {
       fetch(`http://localhost:5000/api/document/${documentId}/spreadsheet`, {
         method: "PUT",
@@ -83,18 +82,14 @@ function SpreadsheetPage() {
         body: JSON.stringify({ data }),
       });
     }, 3000);
-
     return () => clearInterval(interval);
   }, [data, documentId, isEditor]);
 
-  // ✅ Export to Excel
   const handleExportToExcel = () => {
     if (!data || data.length === 0) return;
-
     const worksheet = XLSX.utils.aoa_to_sheet(data);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
-
     const excelBuffer = XLSX.write(workbook, {
       bookType: "xlsx",
       type: "array",
@@ -109,27 +104,33 @@ function SpreadsheetPage() {
   if (loading) return <CircularProgress sx={{ mt: 4 }} />;
 
   return (
-    <Box sx={{ mt: 3 }}>
-      <Typography variant="h5" gutterBottom>
-        📊 Collaborative Spreadsheet
-      </Typography>
-
+    <Box className="spreadsheet-root">
+      <div className="spreadsheet-header-row">
+        <Button
+          variant="outlined"
+          color="primary"
+          className="spreadsheet-back-btn"
+          onClick={() => navigate("/dashboard")}
+        >
+          ← Back to Dashboard
+        </Button>
+        <Typography variant="h5" className="spreadsheet-title">
+          Spreadsheet
+        </Typography>
+        <Button
+          variant="contained"
+          color="success"
+          className="spreadsheet-export-btn"
+          onClick={handleExportToExcel}
+        >
+          Export to Excel
+        </Button>
+      </div>
       {!isEditor && (
         <Alert severity="info" sx={{ mb: 2 }}>
           View-only access. You cannot edit this spreadsheet.
         </Alert>
       )}
-
-      <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
-        <Button
-          variant="contained"
-          color="success"
-          onClick={handleExportToExcel}
-        >
-          📤 Export to Excel
-        </Button>
-      </Box>
-
       <HotTable
         data={data}
         colHeaders
@@ -139,19 +140,29 @@ function SpreadsheetPage() {
         height="75vh"
         stretchH="all"
         licenseKey="non-commercial-and-evaluation"
-        contextMenu={isEditor}
-        dropdownMenu={isEditor}
+        contextMenu={true}
+        dropdownMenu={true}
         mergeCells={true}
         filters={true}
-        manualRowResize
-        manualColumnResize
-        autoWrapRow
-        autoWrapCol
+        manualRowResize={true}
+        manualColumnResize={true}
+        autoWrapRow={true}
+        autoWrapCol={true}
+        undo={true}
+        redo={true}
+        copyPaste={true}
+        comments={true}
+        formulas={{
+          engine: HyperFormula,
+        }}
+        fixedRowsTop={1}
+        fixedColumnsLeft={1}
         afterChange={(changes) => {
           if (changes) {
-            setData((prev) => [...prev]); // trigger save
+            setData((prev) => [...prev]);
           }
         }}
+        className="spreadsheet-table"
       />
     </Box>
   );

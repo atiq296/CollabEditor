@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -24,6 +24,7 @@ function SpreadsheetPage() {
   const [data, setData] = useState([]);
   const [isEditor, setIsEditor] = useState(false);
   const [loading, setLoading] = useState(true);
+  const importInputRef = useRef(null);
 
   const getToken = () => localStorage.getItem("token") || "";
   const getUserId = () => {
@@ -101,6 +102,25 @@ function SpreadsheetPage() {
     saveAs(fileData, `spreadsheet_${documentId}.xlsx`);
   };
 
+  // Import logic
+  const handleImportClick = () => {
+    if (importInputRef.current) importInputRef.current.value = null;
+    importInputRef.current?.click();
+  };
+  const handleImportFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const data = new Uint8Array(evt.target.result);
+      const workbook = XLSX.read(data, { type: "array" });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+      setData(rows);
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
   if (loading) return <CircularProgress sx={{ mt: 4 }} />;
 
   return (
@@ -117,14 +137,31 @@ function SpreadsheetPage() {
         <Typography variant="h5" className="spreadsheet-title">
           Spreadsheet
         </Typography>
-        <Button
-          variant="contained"
-          color="success"
-          className="spreadsheet-export-btn"
-          onClick={handleExportToExcel}
-        >
-          Export to Excel
-        </Button>
+        <div style={{ display: 'flex', gap: '0.7rem' }}>
+          <Button
+            variant="outlined"
+            color="primary"
+            className="spreadsheet-import-btn"
+            onClick={handleImportClick}
+          >
+            Import
+          </Button>
+          <input
+            type="file"
+            accept=".xlsx,.csv"
+            ref={importInputRef}
+            style={{ display: 'none' }}
+            onChange={handleImportFile}
+          />
+          <Button
+            variant="contained"
+            color="success"
+            className="spreadsheet-export-btn"
+            onClick={handleExportToExcel}
+          >
+            Export to Excel
+          </Button>
+        </div>
       </div>
       {!isEditor && (
         <Alert severity="info" sx={{ mb: 2 }}>

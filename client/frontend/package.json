@@ -11,6 +11,7 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
+    "docx": "^9.5.1",
     "file-saver": "^2.0.5",
     "handsontable": "^15.3.0",
     "html2pdf.js": "^0.10.3",

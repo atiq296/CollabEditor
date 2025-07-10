@@ -3,6 +3,10 @@ import { useParams } from "react-router-dom";
 import { io } from "socket.io-client";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
+import { saveAs } from "file-saver";
+import { Document, Packer, Paragraph, TextRun } from "docx";
+
+
 import {
   Button,
   Typography,
@@ -105,6 +109,30 @@ const handleExportToPDF = () => {
     html2pdf.default().from(element).save(`${title || "Document"}.pdf`);
   });
 };
+
+
+
+const handleExportToWord = async () => {
+  const plainText = quillRef.current?.getEditor().getText();
+  if (!plainText) return;
+
+  const doc = new Document({
+    sections: [
+      {
+        children: [
+          new Paragraph({
+            children: [new TextRun(plainText)],
+          }),
+        ],
+      },
+    ],
+  });
+
+  const blob = await Packer.toBlob(doc);
+  saveAs(blob, `${title || "Document"}.docx`);
+};
+
+
 
 
 
@@ -305,6 +333,17 @@ const handleExportToPDF = () => {
           onClick={handleExportToPDF}
         >
           📄 Export to PDF
+        </Button>
+
+
+
+        <Button
+          variant="outlined"
+          color="secondary"
+          sx={{ ml: 1 }}
+          onClick={handleExportToWord}
+        >
+          📄 Export to Word
         </Button>
 
 

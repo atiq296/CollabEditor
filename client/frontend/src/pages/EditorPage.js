@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -21,9 +21,11 @@ import {
   FormControl,
   CircularProgress,
 } from "@mui/material";
+import "./EditorPage.css";
 
 function EditorPage() {
   const { id: documentId } = useParams();
+  const navigate = useNavigate();
   const [socket, setSocket] = useState(null);
   const [quillValue, setQuillValue] = useState("");
   const [activeUsers, setActiveUsers] = useState([]);
@@ -265,99 +267,107 @@ const handleExportToWord = async () => {
   };
 
   return (
-    <div style={{ padding: "2rem" }}>
-      <Typography variant="h6">👥 Active Users:</Typography>
-      <ul>
-        {activeUsers.map((u, i) => (
-          <li key={i}>✅ {u}</li>
-        ))}
-      </ul>
-
-      <TextField
-        fullWidth
-        label="Document Title"
-        variant="outlined"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        sx={{ mb: 2 }}
-      />
-
-      <Box sx={{ mb: 2 }}>
-        <Button
-          variant="contained"
-          color="primary"
-          sx={{ mr: 1 }}
-          onClick={() => setRoleModalOpen(true)}
-        >
-          ➕ Share Document
-        </Button>
-        <Button
-          variant="contained"
-          color="success"
-          sx={{ mr: 1 }}
-          onClick={() => {
-            const autoTitle =
-              title.trim() ||
-              quillValue.replace(/<[^>]+>/g, "").slice(0, 30) ||
-              "Untitled";
-            fetch(`http://localhost:5000/api/document/${documentId}`, {
-              method: "PUT",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${getToken()}`,
-              },
-              body: JSON.stringify({ content: quillValue, title: autoTitle }),
-            });
-          }}
-        >
-          💾 Save Document
-        </Button>
-        <Button variant="outlined" onClick={handleImproveGrammar} disabled={aiLoading}>
-          ✍️ Improve Grammar
-        </Button>
+    <div className="editor-root">
+      <div className="editor-header-row">
         <Button
           variant="outlined"
-          onClick={handleEnhanceTone}
-          sx={{ ml: 1 }}
-          disabled={aiLoading}
+          className="editor-back-btn"
+          onClick={() => navigate("/dashboard")}
         >
-          🎯 Enhance Tone
+          ← Back to Dashboard
         </Button>
-        {aiLoading && <CircularProgress size={20} sx={{ ml: 2 }} />}
-      </Box>
-
-       <Button
+        <TextField
+          className="editor-title-input"
+          label="Document Title"
           variant="outlined"
-          color="secondary"
-          sx={{ ml: 1 }}
-          onClick={handleExportToPDF}
-        >
-          📄 Export to PDF
-        </Button>
-
-
-
-        <Button
-          variant="outlined"
-          color="secondary"
-          sx={{ ml: 1 }}
-          onClick={handleExportToWord}
-        >
-          📄 Export to Word
-        </Button>
-
-
-      <ReactQuill
-        ref={quillRef}
-        theme="snow"
-        value={quillValue}
-        onChange={setQuillValue}
-        placeholder="Start writing your collaborative document here..."
-      />
-
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          size="small"
+        />
+        <div className="editor-header-actions">
+          <Button
+            variant="contained"
+            className="editor-share-btn"
+            onClick={() => setRoleModalOpen(true)}
+          >
+            Share
+          </Button>
+          <Button
+            variant="contained"
+            className="editor-export-btn"
+            onClick={handleExportToPDF}
+          >
+            Export PDF
+          </Button>
+        </div>
+      </div>
+      <div className="editor-main-box">
+        <div className="editor-toolbar-row">
+          <Button
+            variant="contained"
+            color="success"
+            className="editor-save-btn"
+            onClick={() => {
+              const autoTitle =
+                title.trim() ||
+                quillValue.replace(/<[^>]+>/g, "").slice(0, 30) ||
+                "Untitled";
+              fetch(`http://localhost:5000/api/document/${documentId}`, {
+                method: "PUT",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${getToken()}`,
+                },
+                body: JSON.stringify({ content: quillValue, title: autoTitle }),
+              });
+            }}
+          >
+            Save
+          </Button>
+          <Button variant="outlined" onClick={handleImproveGrammar} disabled={aiLoading} className="editor-ai-btn">
+            Improve Grammar
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={handleEnhanceTone}
+            className="editor-ai-btn"
+            disabled={aiLoading}
+          >
+            Enhance Tone
+          </Button>
+          {aiLoading && <CircularProgress size={20} sx={{ ml: 2 }} />}
+        </div>
+        <div className="editor-users-row">
+          <Typography variant="subtitle1">Active Users:</Typography>
+          <ul className="editor-users-list">
+            {activeUsers.map((u, i) => (
+              <li key={i} className="editor-user-item">{u}</li>
+            ))}
+          </ul>
+        </div>
+        <div className="editor-quill-box">
+          <ReactQuill
+            ref={quillRef}
+            theme="snow"
+            value={quillValue}
+            onChange={setQuillValue}
+            placeholder="Start writing your collaborative document here..."
+          />
+        </div>
+        <div className="editor-comments-section">
+          <Typography variant="h6" className="editor-comments-title">Comments</Typography>
+          <List className="editor-comments-list">
+            {comments.map((c, i) => (
+              <ListItem key={i} className="editor-comment-item">
+                <strong>{c.author?.name || "User"}:</strong> {c.text}
+              </ListItem>
+            ))}
+          </List>
+        </div>
+      </div>
       {/* Comment Modal */}
       <Modal open={showCommentModal} onClose={() => setShowCommentModal(false)}>
-        <Box sx={{ p: 3, backgroundColor: "white", mx: "auto", my: "20vh", width: 400, borderRadius: 2 }}>
+        <Box className="editor-modal-box">
           <Typography variant="h6" gutterBottom>Add Comment</Typography>
           <TextField
             fullWidth
@@ -372,20 +382,9 @@ const handleExportToWord = async () => {
           </Button>
         </Box>
       </Modal>
-
-      {/* Comments List */}
-      <Typography variant="h6" sx={{ mt: 4 }}>💬 Comments:</Typography>
-      <List>
-        {comments.map((c, i) => (
-          <ListItem key={i}>
-            <strong>{c.author?.name || "User"}:</strong> {c.text}
-          </ListItem>
-        ))}
-      </List>
-
       {/* Share Modal */}
       <Modal open={roleModalOpen} onClose={() => setRoleModalOpen(false)}>
-        <Box sx={{ p: 3, backgroundColor: "white", mx: "auto", my: "20vh", width: 400, borderRadius: 2 }}>
+        <Box className="editor-modal-box">
           <Typography variant="h6" gutterBottom>Invite Collaborator</Typography>
           <TextField
             fullWidth
@@ -405,7 +404,6 @@ const handleExportToWord = async () => {
               <MenuItem value="Viewer">Viewer</MenuItem>
             </Select>
           </FormControl>
-        
         </Box>
       </Modal>
     </div>

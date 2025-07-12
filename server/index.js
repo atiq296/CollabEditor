@@ -28,6 +28,9 @@ app.use('/api/auth', authRoutes);
 const documentRoutes = require('./routes/document');
 app.use('/api/document', documentRoutes);
 
+const chatRoutes = require('./routes/chat');
+app.use('/api/chat', chatRoutes);
+
 // ✅ Socket.IO Setup — this MUST come AFTER `io` is defined
 const activeUsers = {}; // userId -> name
 
@@ -37,11 +40,53 @@ io.on('connection', (socket) => {
   socket.on('join-document', ({ documentId, username }) => {
     socket.join(documentId);
     activeUsers[socket.id] = username;
-
     // Notify others
     io.to(documentId).emit('user-list', Object.values(activeUsers));
     console.log(`👥 ${username} joined ${documentId}`);
   });
+
+  // --- Global Chat handlers ---
+  socket.on('join-global-chat', ({ username }) => {
+    socket.join('global-chat');
+    console.log(`💬 ${username} joined global chat`);
+  });
+
+  socket.on('global-chat-message', async (message) => {
+    try {
+      // Save to database
+      const ChatMessage = require('./models/Chat');
+      const newMessage = new ChatMessage({
+        user: message.user,
+        text: message.text,
+        time: message.time,
+        timestamp: new Date()
+      });
+      await newMessage.save();
+      
+      // Cleanup old messages
+      await ChatMessage.cleanupOldMessages();
+      
+      // Broadcast to all users in global chat
+      io.to('global-chat').emit('global-chat-message', message);
+      console.log(`💬 [Global] ${message.user}: ${message.text}`);
+    } catch (err) {
+      console.error('Error saving global chat message:', err);
+    }
+  });
+  // --- End Global Chat handlers ---
+
+  // --- Document Chat handlers ---
+  socket.on('join-chat', ({ documentId, username }) => {
+    socket.join('chat-' + documentId);
+    // Optionally: send chat history here
+    console.log(`💬 ${username} joined chat for ${documentId}`);
+  });
+
+  socket.on('chat-message', ({ documentId, user, text, time }) => {
+    io.to('chat-' + documentId).emit('chat-message', { user, text, time });
+    console.log(`💬 [${documentId}] ${user}: ${text}`);
+  });
+  // --- End Document Chat handlers ---
 
   socket.on('send-changes', ({ documentId, delta }) => {
     socket.to(documentId).emit('receive-changes', delta);

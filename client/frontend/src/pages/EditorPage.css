@@ -1,0 +1,157 @@
+.editor-root {
+  min-height: 100vh;
+  width: 100vw;
+  background: linear-gradient(135deg, #0a2342 0%, #274690 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  margin: 0;
+  padding: 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 0;
+  overflow-y: auto;
+}
+.editor-header-row {
+  width: 100%;
+  max-width: 900px;
+  margin: 2.5rem auto 1.2rem auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: none;
+  position: relative;
+  z-index: 2;
+}
+.editor-title-input {
+  flex: 1;
+  margin: 0 1.2rem;
+  background: #fff;
+  border-radius: 8px;
+}
+.editor-header-actions {
+  display: flex;
+  gap: 0.7rem;
+}
+.editor-back-btn {
+  min-width: 170px;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  border: 2px solid #274690 !important;
+  color: #274690 !important;
+  background: #e3eafc !important;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.editor-back-btn:hover {
+  background: #274690 !important;
+  color: #fff !important;
+  border-color: #0a2342 !important;
+}
+.editor-share-btn {
+  background: linear-gradient(90deg, #274690 0%, #0a2342 100%) !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+}
+.editor-export-btn {
+  background: linear-gradient(90deg, #1de9b6 0%, #1dc8e9 100%) !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+}
+.editor-main-box {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 2px 16px 0 rgba(39, 70, 144, 0.13);
+  padding: 2.5rem 2.5rem 2rem 2.5rem;
+  margin: 0 auto 2.5rem auto;
+  max-width: 900px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.editor-toolbar-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+  flex-wrap: wrap;
+}
+.editor-save-btn {
+  background: linear-gradient(90deg, #21c47b 0%, #0bab64 100%) !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+}
+.editor-ai-btn {
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+}
+.editor-users-row {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  margin-bottom: 1.2rem;
+}
+.editor-users-list {
+  display: flex;
+  gap: 0.7rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.editor-user-item {
+  background: #e3eafc;
+  color: #274690;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 0.3rem 0.9rem;
+  font-size: 1rem;
+}
+.editor-quill-box {
+  margin-bottom: 1.5rem;
+}
+.editor-comments-section {
+  margin-top: 2rem;
+}
+.editor-comments-title {
+  color: #274690;
+  font-weight: 700;
+  margin-bottom: 0.7rem;
+}
+.editor-comments-list {
+  background: #f4f7fa;
+  border-radius: 10px;
+  box-shadow: 0 1px 4px 0 rgba(39, 70, 144, 0.07);
+  padding: 0.5rem 0.7rem 0.7rem 0.7rem;
+}
+.editor-comment-item {
+  margin-bottom: 0.5rem;
+}
+.editor-modal-box {
+  padding: 2.5rem 2rem 2rem 2rem;
+  background-color: #fff;
+  margin: 10vh auto;
+  width: 400px;
+  border-radius: 12px;
+  box-shadow: 0 2px 16px 0 rgba(39, 70, 144, 0.13);
+}
+@media (max-width: 900px) {
+  .editor-header-row, .editor-main-box {
+    max-width: 99vw;
+    padding: 1.2rem 0.5rem 1rem 0.5rem;
+  }
+  .editor-header-row {
+    margin-top: 1.2rem;
+  }
+  .editor-modal-box {
+    width: 95vw;
+    min-width: 0;
+    padding: 1.2rem 0.5rem 1rem 0.5rem;
+  }
+} 

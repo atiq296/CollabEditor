@@ -1,56 +1,270 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import './DocumentEditor.css'; // Custom styles (next step)
+import './DocumentEditor.css';
+import { CircularProgress, Menu, MenuItem } from '@mui/material';
+import { useParams } from 'react-router-dom';
+import { io } from 'socket.io-client';
 
 function DocumentEditor() {
+  const { id: documentId } = useParams();
   const [content, setContent] = useState('');
+  const [title, setTitle] = useState('Untitled Document');
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
+  const [showSidebar, setShowSidebar] = useState(true);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [activeUsers, setActiveUsers] = useState([]);
+  const socketRef = useRef(null);
+  // Export menu state
+  const [exportAnchorEl, setExportAnchorEl] = useState(null);
+  // Import file input ref
+  const importInputRef = useRef(null);
+
+  // Get username from token (simulate for now)
+  const getToken = () => localStorage.getItem('token') || '';
+  const getUsername = () => {
+    const token = getToken();
+    if (!token) return 'Unknown';
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.name || 'User';
+    } catch {
+      return 'User';
+    }
+  };
+
+  useEffect(() => {
+    const socket = io('http://localhost:5000');
+    socketRef.current = socket;
+    const username = getUsername();
+    socket.emit('join-document', { documentId, username });
+    socket.on('user-list', (users) => {
+      setActiveUsers(users);
+    });
+    return () => socket.disconnect();
+    // eslint-disable-next-line
+  }, [documentId]);
 
   const handleChange = (value) => {
     setContent(value);
   };
 
   const handleSave = () => {
-    console.log("Document content:", content);
+    console.log('Document content:', content);
     // Later: Send to backend to save in MongoDB
   };
 
-  return (
-    <div className="editor-wrapper">
-      <div className="editor-header">
-        <h2>CollabEditor - Document Editor</h2>
-        <button className="save-btn" onClick={handleSave}>Save</button>
-      </div>
+  // Export menu handlers
+  const handleExportClick = (event) => {
+    setExportAnchorEl(event.currentTarget);
+  };
+  const handleExportClose = () => {
+    setExportAnchorEl(null);
+  };
 
-      <ReactQuill
-        theme="snow"
-        value={content}
-        onChange={handleChange}
-        placeholder="Start typing here..."
-        modules={DocumentEditor.modules}
-        formats={DocumentEditor.formats}
-      />
+  const handleExportPDF = () => {
+    import('html2pdf.js').then((html2pdf) => {
+      html2pdf.default().from(document.querySelector('.ql-editor')).save(`${title}.pdf`);
+    });
+    handleExportClose();
+  };
+
+  const handleExportWord = async () => {
+    const htmlDocx = await import('html-docx-js/dist/html-docx');
+    const contentHtml = document.querySelector('.ql-editor').innerHTML;
+    const converted = htmlDocx.asBlob(`<html><head><meta charset='utf-8'></head><body>${contentHtml}</body></html>`);
+    const url = window.URL.createObjectURL(converted);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title}.docx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    handleExportClose();
+  };
+
+  // Import logic
+  const handleImportClick = () => {
+    if (importInputRef.current) importInputRef.current.value = null;
+    importInputRef.current?.click();
+  };
+  const handleImportFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.name.endsWith('.docx')) {
+      const mammoth = await import('mammoth');
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.convertToHtml({ arrayBuffer });
+      setContent(result.value);
+    } else if (file.name.endsWith('.html')) {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        setContent(evt.target.result);
+      };
+      reader.readAsText(file);
+    } else {
+      alert('Only .docx and .html files are supported for import.');
+    }
+  };
+
+  const handleAddComment = () => {
+    if (newComment.trim()) {
+      setComments([...comments, { text: newComment, author: getUsername(), date: new Date().toLocaleString() }]);
+      setNewComment('');
+    }
+  };
+
+  const handleDeleteComment = (idx) => {
+    setComments(comments.filter((_, i) => i !== idx));
+  };
+
+  // --- AI Grammar/Tone Handlers ---
+  const fetchAIResult = async (inputText, instruction) => {
+    setAiLoading(true);
+    try {
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer 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",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "mistralai/mistral-7b-instruct",
+          messages: [
+            { role: "system", content: instruction },
+            { role: "user", content: inputText }
+          ]
+        })
+      });
+      const json = await response.json();
+      setAiLoading(false);
+      return json.choices?.[0]?.message?.content || inputText;
+    } catch (err) {
+      setAiLoading(false);
+      return inputText;
+    }
+  };
+
+  const handleImproveGrammar = async () => {
+    const plainText = document.querySelector('.ql-editor')?.innerText || '';
+    const improved = await fetchAIResult(
+      plainText,
+      "Fix grammar, punctuation, and fluency. Return only the corrected version without explanation:"
+    );
+    if (improved) setContent(improved);
+  };
+
+  const handleEnhanceTone = async () => {
+    const plainText = document.querySelector('.ql-editor')?.innerText || '';
+    const improved = await fetchAIResult(
+      plainText,
+      "Rewrite this text to make it more professional and engaging in tone:"
+    );
+    if (improved) setContent(improved);
+  };
+
+  return (
+    <div className="doceditor-root">
+      <header className="doceditor-header">
+        <div className="doceditor-title-row">
+          <input
+            className="doceditor-title-input"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+          />
+          <div className="doceditor-header-actions">
+            <button className="doceditor-btn" onClick={handleImportClick}>Import</button>
+            <input
+              type="file"
+              accept=".docx,.html"
+              ref={importInputRef}
+              style={{ display: 'none' }}
+              onChange={handleImportFile}
+            />
+            <button className="doceditor-btn" onClick={handleExportClick}>Export</button>
+            <Menu anchorEl={exportAnchorEl} open={Boolean(exportAnchorEl)} onClose={handleExportClose}>
+              <MenuItem onClick={handleExportPDF}>Export as PDF</MenuItem>
+              <MenuItem onClick={handleExportWord}>Export as Word</MenuItem>
+            </Menu>
+            <button className="doceditor-btn" onClick={handleSave}>Save</button>
+            <button className="doceditor-btn" onClick={() => setShowSidebar(s => !s)}>{showSidebar ? 'Hide' : 'Show'} Comments</button>
+          </div>
+        </div>
+        <div className="doceditor-users">
+          Active Users: {activeUsers.map((u, i) => <span key={i} className="doceditor-user">{u}</span>)}
+        </div>
+        <div className="doceditor-ai-row">
+          <button className="doceditor-btn" onClick={handleImproveGrammar} disabled={aiLoading}>Improve Grammar</button>
+          <button className="doceditor-btn" onClick={handleEnhanceTone} disabled={aiLoading}>Enhance Tone</button>
+          {aiLoading && <CircularProgress size={20} sx={{ ml: 2, color: '#274690' }} />}
+        </div>
+      </header>
+      <div className="doceditor-main-row">
+        <div className="doceditor-editor-box">
+          <ReactQuill
+            theme="snow"
+            value={content}
+            onChange={handleChange}
+            placeholder="Start typing here..."
+            modules={DocumentEditor.modules}
+            formats={DocumentEditor.formats}
+          />
+        </div>
+        {showSidebar && (
+          <aside className="doceditor-sidebar">
+            <h3>Comments</h3>
+            <div className="doceditor-comments-list">
+              {comments.length === 0 && <div className="doceditor-no-comments">No comments yet.</div>}
+              {comments.map((c, i) => (
+                <div key={i} className="doceditor-comment-item">
+                  <div className="doceditor-comment-meta">
+                    <span className="doceditor-comment-author">{c.author}</span>
+                    <span className="doceditor-comment-date">{c.date}</span>
+                    <button className="doceditor-comment-delete" onClick={() => handleDeleteComment(i)}>Delete</button>
+                  </div>
+                  <div className="doceditor-comment-text">{c.text}</div>
+                </div>
+              ))}
+            </div>
+            <div className="doceditor-add-comment">
+              <textarea
+                value={newComment}
+                onChange={e => setNewComment(e.target.value)}
+                placeholder="Add a comment..."
+                rows={2}
+              />
+              <button className="doceditor-btn" onClick={handleAddComment}>Add Comment</button>
+            </div>
+          </aside>
+        )}
+      </div>
     </div>
   );
 }
 
-// Toolbar settings
 DocumentEditor.modules = {
   toolbar: [
-    [{ 'header': [1, 2, 3, false] }],
-    ['bold', 'italic', 'underline', 'strike'],
+    [{ 'font': [] }, { 'size': [] }],
+    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+    ['bold', 'italic', 'underline', 'strike', { 'script': 'super' }, { 'script': 'sub' }],
     [{ 'color': [] }, { 'background': [] }],
     [{ 'align': [] }],
-    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-    ['link', 'image'],
-    ['clean']
+    [{ 'list': 'ordered' }, { 'list': 'bullet' }, { 'list': 'check' }, { 'indent': '-1' }, { 'indent': '+1' }],
+    ['blockquote', 'code-block'],
+    ['link', 'image', 'video'],
+    ['clean'],
   ],
 };
 
 DocumentEditor.formats = [
-  'header', 'bold', 'italic', 'underline', 'strike',
+  'font', 'size', 'header',
+  'bold', 'italic', 'underline', 'strike', 'script',
   'color', 'background', 'align',
-  'list', 'bullet', 'link', 'image'
+  'list', 'bullet', 'check', 'indent',
+  'blockquote', 'code-block',
+  'link', 'image', 'video',
 ];
 
 export default DocumentEditor;

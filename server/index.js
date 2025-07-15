@@ -112,6 +112,6 @@ app.get('/api/ping', (req, res) => {
 
 // ✅ Start Server
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`🌐 Server running at http://localhost:${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`🌐 Server running at http://0.0.0.0:${PORT}`);
 });

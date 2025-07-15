@@ -16,6 +16,7 @@ function DocumentEditor() {
   const [aiLoading, setAiLoading] = useState(false);
   const [activeUsers, setActiveUsers] = useState([]);
   const socketRef = useRef(null);
+  const quillRef = useRef(null); // <-- Add this line
   // Export menu state
   const [exportAnchorEl, setExportAnchorEl] = useState(null);
   // Import file input ref
@@ -45,6 +46,30 @@ function DocumentEditor() {
     return () => socket.disconnect();
     // eslint-disable-next-line
   }, [documentId]);
+
+  // Real-time: Listen for remote changes and update editor
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket || !quillRef.current) return;
+    const quill = quillRef.current.getEditor();
+    const handler = (delta) => quill.updateContents(delta);
+    socket.on('receive-changes', handler);
+    return () => socket.off('receive-changes', handler);
+  }, [socketRef, quillRef]);
+
+  // Real-time: Emit local changes to server
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket || !quillRef.current) return;
+    const quill = quillRef.current.getEditor();
+    const handler = (delta, oldDelta, source) => {
+      if (source === 'user') {
+        socket.emit('send-changes', { documentId, delta });
+      }
+    };
+    quill.on('text-change', handler);
+    return () => quill.off('text-change', handler);
+  }, [socketRef, quillRef, documentId]);
 
   const handleChange = (value) => {
     setContent(value);
@@ -204,6 +229,7 @@ function DocumentEditor() {
       <div className="doceditor-main-row">
         <div className="doceditor-editor-box">
           <ReactQuill
+            ref={quillRef} // <-- Attach the ref here
             theme="snow"
             value={content}
             onChange={handleChange}

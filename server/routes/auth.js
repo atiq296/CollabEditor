@@ -8,7 +8,7 @@ const User = require('../models/User');
 router.post('/signup', async (req, res) => {
   console.log("📩 Received signup data:", req.body);
 
-  const { name, email, password, role } = req.body;
+  const { name, email, password } = req.body; // Remove role from destructure
 
   if (!name || !email || !password) {
     console.log("❌ Missing fields in signup");
@@ -27,7 +27,7 @@ router.post('/signup', async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      role: role || 'Editor'
+      // role is not set here
     });
 
     await newUser.save();
@@ -57,6 +57,24 @@ router.post('/signup', async (req, res) => {
   }
 });
 
+// ====================== SET ROLE ======================
+router.post('/set-role', require('../middleware/auth'), async (req, res) => {
+  const { role } = req.body;
+  if (!role || !['Owner', 'Editor', 'Viewer'].includes(role)) {
+    return res.status(400).json({ message: 'Invalid role' });
+  }
+  try {
+    const user = await require('../models/User').findByIdAndUpdate(
+      req.userId,
+      { role },
+      { new: true }
+    ).select('-password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to set role', error: err.message });
+  }
+});
 
 // ====================== LOGIN ======================
 router.post('/login', async (req, res) => {
@@ -97,6 +115,17 @@ router.post('/login', async (req, res) => {
   } catch (err) {
     console.log("❌ Login error:", err.message);
     res.status(500).json({ message: 'Login failed', error: err.message });
+  }
+});
+
+// ====================== GET CURRENT USER PROFILE ======================
+router.get('/me', require('../middleware/auth'), async (req, res) => {
+  try {
+    const user = await require('../models/User').findById(req.userId).select('-password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch user profile', error: err.message });
   }
 });
 

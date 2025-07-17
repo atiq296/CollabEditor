@@ -6,6 +6,7 @@ import {
   Alert,
   CircularProgress,
   Button,
+  Snackbar,
 } from "@mui/material";
 import Handsontable from "handsontable";
 import { HotTable } from "@handsontable/react";
@@ -25,6 +26,10 @@ function SpreadsheetPage() {
   const [isEditor, setIsEditor] = useState(false);
   const [loading, setLoading] = useState(true);
   const importInputRef = useRef(null);
+  const [saveStatus, setSaveStatus] = useState(null); // 'success' | 'error' | null
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState("");
+  const [title, setTitle] = useState('Untitled Spreadsheet');
 
   const getToken = () => localStorage.getItem("token") || "";
   const getUserId = () => {
@@ -50,6 +55,8 @@ function SpreadsheetPage() {
               (c) => c.user._id === userId && c.role === "Editor"
             )
         );
+        setTitle(doc.title || 'Untitled Spreadsheet');
+        setComments(doc.comments || []);
       });
 
     fetch(`http://localhost:5000/api/document/${documentId}/spreadsheet`, {
@@ -121,6 +128,56 @@ function SpreadsheetPage() {
     reader.readAsArrayBuffer(file);
   };
 
+  const handleAddComment = async () => {
+    if (newComment.trim()) {
+      const token = getToken();
+      try {
+        const res = await fetch(`http://localhost:5000/api/document/${documentId}/comment`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ text: newComment }),
+        });
+        if (res.ok) {
+          const savedComment = await res.json();
+          setComments([...comments, savedComment]);
+          setNewComment("");
+        } else {
+          alert("Failed to save comment.");
+        }
+      } catch (err) {
+        alert("Server error while saving comment.");
+      }
+    }
+  };
+
+  const handleSave = async () => {
+    console.log('Saving spreadsheet:', data, title);
+    try {
+      const token = getToken();
+      const res = await fetch(`http://localhost:5000/api/document/${documentId}/spreadsheet`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ data, title }),
+      });
+      if (res.ok) {
+        setSaveStatus('success');
+        // Notify dashboard to refresh
+        window.dispatchEvent(new Event('refreshDocs'));
+      } else {
+        setSaveStatus('error');
+      }
+    } catch (err) {
+      setSaveStatus('error');
+    }
+    setTimeout(() => setSaveStatus(null), 2000);
+  };
+
   if (loading) return <CircularProgress sx={{ mt: 4 }} />;
 
   return (
@@ -134,9 +191,22 @@ function SpreadsheetPage() {
         >
           ← Back to Dashboard
         </Button>
-        <Typography variant="h5" className="spreadsheet-title">
-          Spreadsheet
-        </Typography>
+        <input
+          className="spreadsheet-title-input"
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          style={{
+            fontWeight: 800,
+            fontSize: '1.5rem',
+            textAlign: 'center',
+            border: 'none',
+            background: 'transparent',
+            color: '#274690',
+            outline: 'none',
+            width: '100%',
+            maxWidth: 400,
+          }}
+        />
         <div style={{ display: 'flex', gap: '0.7rem' }}>
           <Button
             variant="outlined"
@@ -160,6 +230,14 @@ function SpreadsheetPage() {
             onClick={handleExportToExcel}
           >
             Export to Excel
+          </Button>
+          <Button
+            variant="contained"
+            color="success"
+            className="spreadsheet-save-btn"
+            onClick={handleSave}
+          >
+            Save Spreadsheet
           </Button>
         </div>
       </div>
@@ -201,6 +279,37 @@ function SpreadsheetPage() {
         }}
         className="spreadsheet-table"
       />
+      <div className="spreadsheet-comments-list" style={{marginTop: 24, marginBottom: 24}}>
+        <Typography variant="h6">Comments</Typography>
+        {comments.length === 0 && <div>No comments yet.</div>}
+        {comments.map((c, i) => (
+          <div key={i} className="spreadsheet-comment-item">
+            <span className="spreadsheet-comment-author">
+              {c.author && typeof c.author === 'object' ? c.author.name : c.author}
+            </span>
+            : {c.text}
+          </div>
+        ))}
+        <textarea
+          value={newComment}
+          onChange={e => setNewComment(e.target.value)}
+          placeholder="Add a comment..."
+          rows={2}
+          style={{width: '100%', borderRadius: 8, border: '1px solid #b3c7f9', padding: '0.5rem 1rem', fontSize: '1rem', marginTop: 8}}
+        />
+        <Button onClick={handleAddComment} variant="contained" sx={{mt: 1}}>Add Comment</Button>
+      </div>
+      <Snackbar open={!!saveStatus} autoHideDuration={2000} onClose={() => setSaveStatus(null)} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+        {saveStatus === 'success' ? (
+          <Alert severity="success" sx={{ width: '100%' }}>
+            Spreadsheet saved successfully!
+          </Alert>
+        ) : saveStatus === 'error' ? (
+          <Alert severity="error" sx={{ width: '100%' }}>
+            Failed to save spreadsheet.
+          </Alert>
+        ) : null}
+      </Snackbar>
     </Box>
   );
 }

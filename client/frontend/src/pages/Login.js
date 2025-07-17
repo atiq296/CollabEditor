@@ -35,7 +35,8 @@ function Login() {
         // ✅ Save token and user name
         localStorage.setItem("token", data.token);
         localStorage.setItem("username", data.user.name);
-        navigate("/dashboard");
+        // Always redirect to /select-role after login
+        navigate("/select-role");
       } else {
         setError(data.message || "Login failed");
       }

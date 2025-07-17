@@ -8,22 +8,22 @@ import SpreadsheetPage from "./pages/SpreadsheetPage";
 import HomePage from "./pages/HomePage";
 import { ChatProvider } from "./contexts/ChatContext";
 import GlobalChat from "./components/GlobalChat";
+import SelectRole from "./pages/SelectRole";
 
 function App() {
   return (
     <ChatProvider>
       <BrowserRouter>
         <CssBaseline />
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-        </Routes>
         <Container maxWidth="lg">
           <Routes>
+            <Route path="/" element={<HomePage />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/login" element={<Login />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/editor/:id" element={<DocumentEditor />} />
             <Route path="/spreadsheet/:id" element={<SpreadsheetPage />} />
+            <Route path="/select-role" element={<SelectRole />} />
           </Routes>
         </Container>
         <GlobalChat />

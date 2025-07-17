@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import './DocumentEditor.css';
-import { CircularProgress, Menu, MenuItem } from '@mui/material';
+import { CircularProgress, Menu, MenuItem, Snackbar, Alert } from '@mui/material';
 import { useParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
 
@@ -21,6 +21,8 @@ function DocumentEditor() {
   const [exportAnchorEl, setExportAnchorEl] = useState(null);
   // Import file input ref
   const importInputRef = useRef(null);
+  const [saveStatus, setSaveStatus] = useState(null); // 'success' | 'error' | null
+  const [commentStatus, setCommentStatus] = useState(null); // 'success' | 'error' | null
 
   // Get username from token (simulate for now)
   const getToken = () => localStorage.getItem('token') || '';
@@ -45,6 +47,19 @@ function DocumentEditor() {
     });
     return () => socket.disconnect();
     // eslint-disable-next-line
+  }, [documentId]);
+
+  useEffect(() => {
+    fetch(`http://localhost:5000/api/document/${documentId}`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        console.log('Loaded:', data.content, data.title);
+        setContent(data.content || '');
+        setTitle(data.title || 'Untitled Document');
+        setComments(data.comments || []);
+      });
   }, [documentId]);
 
   // Real-time: Listen for remote changes and update editor
@@ -75,9 +90,35 @@ function DocumentEditor() {
     setContent(value);
   };
 
-  const handleSave = () => {
-    console.log('Document content:', content);
-    // Later: Send to backend to save in MongoDB
+  const handleTitleChange = (e) => {
+    setTitle(e.target.value);
+  };
+
+  const handleSave = async () => {
+    console.log('Saving:', content, title);
+    try {
+      const token = getToken();
+      const autoTitle =
+        title.trim() ||
+        (typeof content === 'string' ? content.replace(/<[^>]+>/g, "").slice(0, 30) : "") ||
+        "Untitled";
+      const res = await fetch(`http://localhost:5000/api/document/${documentId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ content, title: autoTitle }),
+      });
+      if (res.ok) {
+        setSaveStatus('success');
+      } else {
+        setSaveStatus('error');
+      }
+    } catch (err) {
+      setSaveStatus('error');
+    }
+    setTimeout(() => setSaveStatus(null), 2000);
   };
 
   // Export menu handlers
@@ -134,10 +175,32 @@ function DocumentEditor() {
     }
   };
 
-  const handleAddComment = () => {
+  const handleAddComment = async () => {
     if (newComment.trim()) {
-      setComments([...comments, { text: newComment, author: getUsername(), date: new Date().toLocaleString() }]);
-      setNewComment('');
+      const token = getToken();
+      try {
+        const res = await fetch(`http://localhost:5000/api/document/${documentId}/comment`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            text: newComment,
+          }),
+        });
+        if (res.ok) {
+          const savedComment = await res.json();
+          setComments([...comments, savedComment]);
+          setNewComment('');
+          setCommentStatus('success');
+        } else {
+          setCommentStatus('error');
+        }
+      } catch (err) {
+        setCommentStatus('error');
+      }
+      setTimeout(() => setCommentStatus(null), 2000);
     }
   };
 
@@ -197,7 +260,7 @@ function DocumentEditor() {
           <input
             className="doceditor-title-input"
             value={title}
-            onChange={e => setTitle(e.target.value)}
+            onChange={handleTitleChange}
           />
           <div className="doceditor-header-actions">
             <button className="doceditor-btn" onClick={handleImportClick}>Import</button>
@@ -246,8 +309,10 @@ function DocumentEditor() {
               {comments.map((c, i) => (
                 <div key={i} className="doceditor-comment-item">
                   <div className="doceditor-comment-meta">
-                    <span className="doceditor-comment-author">{c.author}</span>
-                    <span className="doceditor-comment-date">{c.date}</span>
+                    <span className="doceditor-comment-author">
+                      {c.author && typeof c.author === 'object' ? c.author.name : c.author}
+                    </span>
+                    {c.date && <span className="doceditor-comment-date">{c.date}</span>}
                     <button className="doceditor-comment-delete" onClick={() => handleDeleteComment(i)}>Delete</button>
                   </div>
                   <div className="doceditor-comment-text">{c.text}</div>
@@ -266,6 +331,28 @@ function DocumentEditor() {
           </aside>
         )}
       </div>
+      <Snackbar open={!!saveStatus} autoHideDuration={2000} onClose={() => setSaveStatus(null)} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+        {saveStatus === 'success' ? (
+          <Alert severity="success" sx={{ width: '100%' }}>
+            Document saved successfully!
+          </Alert>
+        ) : saveStatus === 'error' ? (
+          <Alert severity="error" sx={{ width: '100%' }}>
+            Failed to save document.
+          </Alert>
+        ) : null}
+      </Snackbar>
+      <Snackbar open={!!commentStatus} autoHideDuration={2000} onClose={() => setCommentStatus(null)} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+        {commentStatus === 'success' ? (
+          <Alert severity="success" sx={{ width: '100%' }}>
+            Comment saved successfully!
+          </Alert>
+        ) : commentStatus === 'error' ? (
+          <Alert severity="error" sx={{ width: '100%' }}>
+            Failed to save comment.
+          </Alert>
+        ) : null}
+      </Snackbar>
     </div>
   );
 }

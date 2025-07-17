@@ -183,7 +183,7 @@ router.get('/:id/spreadsheet', authMiddleware, async (req, res) => {
 
 // ✅ Save spreadsheet data
 router.put('/:id/spreadsheet', authMiddleware, async (req, res) => {
-  const { data } = req.body;
+  const { data, title } = req.body;
 
   try {
     const doc = await Document.findById(req.params.id);
@@ -196,6 +196,7 @@ router.put('/:id/spreadsheet', authMiddleware, async (req, res) => {
 
     doc.spreadsheet.data = data;
     doc.spreadsheet.updatedAt = Date.now();
+    if (title !== undefined && title.trim().length > 0) doc.title = title.trim();
     await doc.save();
 
     res.status(200).json({ message: "Spreadsheet saved" });

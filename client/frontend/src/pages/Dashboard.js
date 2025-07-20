@@ -8,6 +8,15 @@ import {
   ListItemText,
   Divider,
   Stack,
+  Modal,
+  Box,
+  TextField,
+  Select,
+  MenuItem,
+  InputLabel,
+  FormControl,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import "./Dashboard.css";
 
@@ -15,6 +24,11 @@ function Dashboard() {
   const navigate = useNavigate();
   const [myDocs, setMyDocs] = useState([]);
   const [user, setUser] = useState(null); // <-- Add user state
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareDocId, setShareDocId] = useState(null);
+  const [shareEmail, setShareEmail] = useState("");
+  const [shareRole, setShareRole] = useState("Viewer");
+  const [shareStatus, setShareStatus] = useState(null); // 'success' | 'error' | null
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -30,24 +44,24 @@ function Dashboard() {
         .catch(() => setUser(null));
 
       const fetchDocs = () => {
-        fetch("http://localhost:5000/api/document/mydocs", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-          .then((res) => res.json())
-          .then((data) => {
-            if (Array.isArray(data)) {
-              setMyDocs(data);
-            } else {
-              console.error("⚠️ Unexpected response:", data);
-              setMyDocs([]);
-            }
-          })
-          .catch((err) => {
-            console.error("❌ Failed to load documents:", err);
+      fetch("http://localhost:5000/api/document/mydocs", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data)) {
+            setMyDocs(data);
+          } else {
+            console.error("⚠️ Unexpected response:", data);
             setMyDocs([]);
-          });
+          }
+        })
+        .catch((err) => {
+          console.error("❌ Failed to load documents:", err);
+          setMyDocs([]);
+        });
       };
       fetchDocs();
       // Listen for spreadsheet save event
@@ -108,6 +122,41 @@ function Dashboard() {
     }
   };
 
+  const handleOpenShare = (docId) => {
+    setShareDocId(docId);
+    setShareOpen(true);
+    setShareEmail("");
+    setShareRole("Viewer");
+    setShareStatus(null);
+  };
+  const handleCloseShare = () => {
+    setShareOpen(false);
+    setShareDocId(null);
+  };
+  const handleShare = async () => {
+    if (!shareEmail) return;
+    const token = localStorage.getItem("token");
+    try {
+      // Always send a role (default to 'Viewer')
+      const res = await fetch(`http://localhost:5000/api/document/${shareDocId}/share`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ email: shareEmail, role: 'Viewer' }),
+      });
+      if (res.ok) {
+        setShareStatus("success");
+        setTimeout(() => handleCloseShare(), 1200);
+      } else {
+        setShareStatus("error");
+      }
+    } catch {
+      setShareStatus("error");
+    }
+  };
+
   // Split documents into textDocs and spreadsheets
   const spreadsheets = myDocs.filter(
     doc => doc.spreadsheet && Array.isArray(doc.spreadsheet.data) && doc.spreadsheet.data.length > 0
@@ -163,38 +212,46 @@ function Dashboard() {
         </div>
         <div style={{ display: 'flex', gap: 32, alignItems: 'flex-start', marginTop: 32 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="h6" className="dashboard-docs-title" align="left">
-              📄 Your Documents:
-            </Typography>
+        <Typography variant="h6" className="dashboard-docs-title" align="left">
+          📄 Your Documents:
+        </Typography>
             {Array.isArray(textDocs) && textDocs.length > 0 ? (
-              <List className="dashboard-doc-list">
+          <List className="dashboard-doc-list">
                 {textDocs.map((doc) => (
-                  <div key={doc._id} className="dashboard-doc-item">
-                    <ListItem>
-                      <ListItemText
-                        primary={doc.title}
-                        secondary={new Date(doc.updatedAt).toLocaleString()}
-                      />
-                    </ListItem>
-                    <Stack direction="row" spacing={2} className="dashboard-doc-actions">
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        component={Link}
-                        to={`/editor/${doc._id}`}
-                      >
-                        ✍️ Open Editor
-                      </Button>
-                    </Stack>
-                    <Divider />
-                  </div>
-                ))}
-              </List>
-            ) : (
-              <Typography variant="body2" className="dashboard-empty-text">
-                You haven't created any documents yet.
-              </Typography>
-            )}
+              <div key={doc._id} className="dashboard-doc-item">
+                <ListItem>
+                  <ListItemText
+                    primary={doc.title}
+                    secondary={new Date(doc.updatedAt).toLocaleString()}
+                  />
+                </ListItem>
+                <Stack direction="row" spacing={2} className="dashboard-doc-actions">
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    component={Link}
+                    to={`/editor/${doc._id}`}
+                  >
+                    ✍️ Open Editor
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                        color="info"
+                        onClick={() => handleOpenShare(doc._id)}
+                  >
+                        Share
+                  </Button>
+                </Stack>
+                <Divider />
+              </div>
+            ))}
+          </List>
+        ) : (
+          <Typography variant="body2" className="dashboard-empty-text">
+            You haven't created any documents yet.
+          </Typography>
+        )}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <Typography variant="h6" className="dashboard-docs-title" align="left">
@@ -219,6 +276,14 @@ function Dashboard() {
                       >
                         📊 Open Spreadsheet
                       </Button>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        color="info"
+                        onClick={() => handleOpenShare(doc._id)}
+                      >
+                        Share
+                      </Button>
                     </Stack>
                     <Divider />
                   </div>
@@ -232,6 +297,43 @@ function Dashboard() {
           </div>
         </div>
       </main>
+      <Modal open={shareOpen} onClose={handleCloseShare}>
+        <Box sx={{ p: 3, bgcolor: '#fff', borderRadius: 2, boxShadow: 3, maxWidth: 400, mx: 'auto', mt: 12 }}>
+          <Typography variant="h6" gutterBottom>Share Document</Typography>
+          <TextField
+            fullWidth
+            label="User Email"
+            value={shareEmail}
+            onChange={e => setShareEmail(e.target.value)}
+            sx={{ mb: 2 }}
+          />
+          <Button variant="contained" onClick={handleShare} fullWidth>Share</Button>
+          {shareStatus === 'success' && <Alert severity="success" sx={{ mt: 2 }}>Shared successfully!</Alert>}
+          {shareStatus === 'error' && <Alert severity="error" sx={{ mt: 2 }}>Failed to share.</Alert>}
+          <Typography variant="subtitle2" sx={{ mt: 2 }}>Or share with a link:</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+            <TextField
+              value={`${window.location.origin}${shareDocId ? (spreadsheets.some(doc => doc._id === shareDocId) ? '/spreadsheet/' : '/editor/') + shareDocId : ''}`}
+              InputProps={{ readOnly: true }}
+              fullWidth
+              size="small"
+              sx={{ mr: 1 }}
+            />
+            <Button
+              variant="outlined"
+              onClick={() => {
+                const url = `${window.location.origin}${shareDocId ? (spreadsheets.some(doc => doc._id === shareDocId) ? '/spreadsheet/' : '/editor/') + shareDocId : ''}`;
+                navigator.clipboard.writeText(url);
+                setShareStatus('link-copied');
+                setTimeout(() => setShareStatus(null), 1200);
+              }}
+            >
+              Copy Link
+            </Button>
+          </Box>
+          {shareStatus === 'link-copied' && <Alert severity="success" sx={{ mt: 1 }}>Link copied!</Alert>}
+        </Box>
+      </Modal>
     </div>
   );
 }

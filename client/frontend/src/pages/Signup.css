@@ -1,11 +1,10 @@
-/* Signup Page Styles */
-.signup-root-2panel {
+.signup-root {
   min-height: 100vh;
   width: 100vw;
+  background: linear-gradient(135deg, #0a2342 0%, #274690 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #0a2342 0%, #274690 100%);
   margin: 0;
   padding: 0;
   position: fixed;
@@ -15,123 +14,121 @@
   bottom: 0;
   z-index: 0;
 }
-.signup-panel {
+
+.signup-container {
   display: flex;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
-  box-sizing: border-box;
-  position: relative;
+  min-height: 100vh;
 }
-.signup-panel-left {
-  border-radius: 32px 0 0 32px;
-  width: 420px;
-  height: 600px;
-  z-index: 2;
-  background: #fff;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  position: relative;
-  box-shadow: 0 8px 32px 0 rgba(10, 35, 66, 0.13);
-  overflow: hidden;
-}
-.signup-panel-right {
-  border-radius: 0 32px 32px 0;
-  width: 420px;
-  height: 600px;
-  background: linear-gradient(135deg, #1de9b6 0%, #1dc8e9 100%);
-  color: #fff;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  box-shadow: 0 8px 32px 0 rgba(10, 35, 66, 0.10);
-  overflow: hidden;
-}
-.signup-form-2panel {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+
+.signup-form {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 2.5rem 2rem;
+  border-radius: 18px;
+  box-shadow: 0 8px 32px 0 rgba(10, 35, 66, 0.18);
   width: 100%;
-  align-items: center;
+  max-width: 370px;
+  transition: box-shadow 0.3s;
+  position: relative;
 }
 
-/* Reduce margin between MUI TextFields */
-.signup-form-2panel .MuiTextField-root {
-  margin-top: 0.3rem !important;
-  margin-bottom: 0.3rem !important;
+.animate-fade-in {
+  animation: fadeInUp 0.8s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-/* Reduce margin for FormControl */
-.signup-form-2panel .MuiFormControl-root {
-  margin-top: 0.3rem !important;
-  margin-bottom: 0.1rem !important;
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.signup-title {
+  color: #0a2342;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 1.5rem;
+}
+
+.signup-error {
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+
+.signup-input {
+  margin-bottom: 1.2rem !important;
+}
+
+.signup-input-inner {
+  background: #f4f7fa;
+  border-radius: 8px;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.signup-input .MuiInputBase-root {
+  border-radius: 8px;
+}
+
+.signup-input .Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #274690 !important;
+  box-shadow: 0 0 0 2px rgba(39, 70, 144, 0.15);
+}
+
+.signup-button {
+  background: linear-gradient(90deg, #274690 0%, #0a2342 100%);
+  color: #fff;
+  font-weight: 600;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px 0 rgba(39, 70, 144, 0.10);
+  transition: background 0.3s, transform 0.2s, box-shadow 0.2s;
+}
+
+.signup-button:hover, .signup-button:focus {
+  background: linear-gradient(90deg, #0a2342 0%, #274690 100%);
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 4px 16px 0 rgba(39, 70, 144, 0.18);
 }
 
 .login-button {
-  margin-top: 0.4rem !important;
-  width: 100%;
-  align-self: center;
+  margin-top: 1rem !important;
+  border-color: #274690 !important;
+  color: #274690 !important;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
-.welcome-title {
-  color: #fff !important;
-  font-weight: 800 !important;
-  font-size: 2rem !important;
-  margin-bottom: 1.2rem !important;
+
+.login-button:hover, .login-button:focus {
+  background: #eaf0fa !important;
+  border-color: #0a2342 !important;
+  color: #0a2342 !important;
 }
-.welcome-login-prompt {
-  margin-top: 2.5rem;
+
+@media (max-width: 600px) {
+  .signup-form {
+    padding: 1.5rem 0.5rem;
+    max-width: 95vw;
+  }
+}
+
+.logo-svg-container {
   display: flex;
   justify-content: center;
+  align-items: flex-end;
+  width: 100vw;
+  margin-bottom: 2.5rem;
+  margin-top: 3vh;
+  pointer-events: none;
 }
-.welcome-login-link {
-  color: #fff !important;
-  font-weight: 700 !important;
-  text-decoration: underline;
-  margin-left: 0.5rem;
-  font-size: 1rem;
-  min-width: unset;
-  padding: 0;
-}
-@media (max-width: 900px) {
-  .signup-root-2panel {
-    flex-direction: column;
-    background: linear-gradient(135deg, #0a2342 0%, #274690 100%);
-    position: static;
-  }
-  .signup-panel-left, .signup-panel-right {
-    border-radius: 32px 32px 0 0;
-    width: 95vw;
-    max-width: 98vw;
-    min-width: 320px;
-    margin: 0 auto;
-    height: auto;
-    min-height: 320px;
-  }
-  .signup-panel-right {
-    border-radius: 0 0 32px 32px;
-    min-height: 200px;
-    margin-bottom: 2rem;
-  }
-}
+
 @media (max-width: 600px) {
-  .signup-panel {
-    padding: 1.2rem 0.5rem;
-    min-width: 98vw;
-    max-width: 100vw;
-    height: auto;
-    min-height: 320px;
-  }
-  .signup-panel-left, .signup-panel-right {
-    min-width: 98vw;
-    max-width: 100vw;
-    border-radius: 0;
-    height: auto;
-    min-height: 220px;
-    width: 100vw;
+  .logo-svg-container {
+    margin-bottom: 1.2rem;
+    margin-top: 1.2rem;
   }
 } 

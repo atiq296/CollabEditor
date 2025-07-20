@@ -9,6 +9,9 @@ import HomePage from "./pages/HomePage";
 import { ChatProvider } from "./contexts/ChatContext";
 import GlobalChat from "./components/GlobalChat";
 import SelectRole from "./pages/SelectRole";
+import VerifyOtp from "./pages/VerifyOtp";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 function App() {
   return (
@@ -24,6 +27,9 @@ function App() {
             <Route path="/editor/:id" element={<DocumentEditor />} />
             <Route path="/spreadsheet/:id" element={<SpreadsheetPage />} />
             <Route path="/select-role" element={<SelectRole />} />
+            <Route path="/verify-otp" element={<VerifyOtp />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password/:token" element={<ResetPassword />} />
           </Routes>
         </Container>
         <GlobalChat />

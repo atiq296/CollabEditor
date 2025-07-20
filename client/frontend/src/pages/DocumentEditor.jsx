@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import './DocumentEditor.css';
-import { CircularProgress, Menu, MenuItem, Snackbar, Alert } from '@mui/material';
-import { useParams } from 'react-router-dom';
+import { CircularProgress, Menu, Snackbar, Alert, Select, MenuItem } from '@mui/material';
+import { useParams, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 
 function DocumentEditor() {
@@ -23,6 +23,9 @@ function DocumentEditor() {
   const importInputRef = useRef(null);
   const [saveStatus, setSaveStatus] = useState(null); // 'success' | 'error' | null
   const [commentStatus, setCommentStatus] = useState(null); // 'success' | 'error' | null
+  const [collaborators, setCollaborators] = useState([]);
+  const [ownerId, setOwnerId] = useState(null);
+  const navigate = useNavigate();
 
   // Get username from token (simulate for now)
   const getToken = () => localStorage.getItem('token') || '';
@@ -34,6 +37,35 @@ function DocumentEditor() {
       return payload.name || 'User';
     } catch {
       return 'User';
+    }
+  };
+
+  const getCurrentUserId = () => {
+    const token = getToken();
+    if (!token) return null;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.id;
+    } catch {
+      return null;
+    }
+  };
+
+  const handleRoleChange = async (userId, newRole) => {
+    const token = getToken();
+    const res = await fetch(`${process.env.REACT_APP_API_URL}/api/document/${documentId}/collaborator`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ userId, role: newRole }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setCollaborators(data.collaborators);
+    } else {
+      alert(data.message || "Failed to update role");
     }
   };
 
@@ -59,6 +91,8 @@ function DocumentEditor() {
         setContent(data.content || '');
         setTitle(data.title || 'Untitled Document');
         setComments(data.comments || []);
+        setCollaborators(data.collaborators || []);
+        setOwnerId(data.createdBy || (data.createdBy?._id));
       });
   }, [documentId]);
 
@@ -192,7 +226,7 @@ function DocumentEditor() {
         if (res.ok) {
           const savedComment = await res.json();
           setComments([...comments, savedComment]);
-          setNewComment('');
+      setNewComment('');
           setCommentStatus('success');
         } else {
           setCommentStatus('error');
@@ -256,6 +290,13 @@ function DocumentEditor() {
   return (
     <div className="doceditor-root">
       <header className="doceditor-header">
+        <button
+          className="doceditor-btn"
+          style={{ marginBottom: 16 }}
+          onClick={() => navigate('/dashboard')}
+        >
+          ← Back to Dashboard
+        </button>
         <div className="doceditor-title-row">
           <input
             className="doceditor-title-input"
@@ -327,6 +368,27 @@ function DocumentEditor() {
                 rows={2}
               />
               <button className="doceditor-btn" onClick={handleAddComment}>Add Comment</button>
+            </div>
+            <div className="doceditor-collaborators-list" style={{ margin: '2rem 0' }}>
+              <h3>Collaborators</h3>
+              {collaborators.length === 0 && <div>No collaborators yet.</div>}
+              {collaborators.map((collab) => (
+                <div key={collab.user._id || collab.user} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                  <span>{collab.user.name || collab.user.email || collab.user}</span>
+                  <b style={{ marginLeft: 8 }}>{collab.role}</b>
+                  {getCurrentUserId() === (ownerId?._id || ownerId) && (
+                    <Select
+                      value={collab.role}
+                      onChange={e => handleRoleChange(collab.user._id || collab.user, e.target.value)}
+                      size="small"
+                      sx={{ ml: 1 }}
+                    >
+                      <MenuItem value="Editor">Editor</MenuItem>
+                      <MenuItem value="Viewer">Viewer</MenuItem>
+                    </Select>
+                  )}
+                </div>
+              ))}
             </div>
           </aside>
         )}

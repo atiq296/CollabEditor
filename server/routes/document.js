@@ -4,6 +4,7 @@ const router = express.Router();
 const Document = require('../models/Document');
 const User = require('../models/User');
 const authMiddleware = require('../middleware/auth');
+const nodemailer = require('nodemailer');
 
 // ✅ List documents created or shared with logged-in user
 router.get('/mydocs', authMiddleware, async (req, res) => {
@@ -67,6 +68,24 @@ router.post('/:id/share', authMiddleware, async (req, res) => {
     }
 
     await doc.save();
+
+    // Send email notification to the shared user
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
+    const docType = doc.spreadsheet && Array.isArray(doc.spreadsheet.data) && doc.spreadsheet.data.length > 0 ? 'spreadsheet' : 'document';
+    const url = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/${docType}/${doc._id}`;
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: `A ${docType} was shared with you on CollabEditor`,
+      text: `You have been granted access to a ${docType} titled "${doc.title}".\n\nOpen it here: ${url}`
+    });
+
     res.status(200).json({ message: "Shared successfully" });
   } catch (err) {
     console.error("❌ Share failed:", err);
@@ -159,8 +178,31 @@ router.post('/:id/comment', authMiddleware, async (req, res) => {
   }
 });
 
-// ... existing requires
-// Add below routes at the end before module.exports
+// PATCH /api/document/:id/collaborator
+router.patch('/:id/collaborator', authMiddleware, async (req, res) => {
+  const { userId, role } = req.body;
+  if (!userId || !role) return res.status(400).json({ message: "User ID and role are required" });
+
+  try {
+    const doc = await Document.findById(req.params.id);
+    if (!doc) return res.status(404).json({ message: "Document not found" });
+
+    // Only owner can change roles
+    if (doc.createdBy.toString() !== req.userId.toString()) {
+      return res.status(403).json({ message: "Only owner can change roles" });
+    }
+
+    const collaborator = doc.collaborators.find(c => c.user.toString() === userId);
+    if (!collaborator) return res.status(404).json({ message: "Collaborator not found" });
+
+    collaborator.role = role;
+    await doc.save();
+    await doc.populate('collaborators.user', 'name email');
+    res.json({ message: "Role updated", collaborators: doc.collaborators });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to update role", error: err.message });
+  }
+});
 
 // ✅ Get spreadsheet data
 router.get('/:id/spreadsheet', authMiddleware, async (req, res) => {

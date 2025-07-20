@@ -7,6 +7,8 @@ import {
   CircularProgress,
   Button,
   Snackbar,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import Handsontable from "handsontable";
 import { HotTable } from "@handsontable/react";
@@ -30,6 +32,8 @@ function SpreadsheetPage() {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
   const [title, setTitle] = useState('Untitled Spreadsheet');
+  const [collaborators, setCollaborators] = useState([]);
+  const [ownerId, setOwnerId] = useState(null);
 
   const getToken = () => localStorage.getItem("token") || "";
   const getUserId = () => {
@@ -37,6 +41,35 @@ function SpreadsheetPage() {
       return JSON.parse(atob(getToken().split(".")[1])).id;
     } catch {
       return "";
+    }
+  };
+
+  const getCurrentUserId = () => {
+    const token = getToken();
+    if (!token) return null;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.id;
+    } catch {
+      return null;
+    }
+  };
+
+  const handleRoleChange = async (userId, newRole) => {
+    const token = getToken();
+    const res = await fetch(`${process.env.REACT_APP_API_URL}/api/document/${documentId}/collaborator`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ userId, role: newRole }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setCollaborators(data.collaborators);
+    } else {
+      alert(data.message || "Failed to update role");
     }
   };
 
@@ -57,6 +90,8 @@ function SpreadsheetPage() {
         );
         setTitle(doc.title || 'Untitled Spreadsheet');
         setComments(doc.comments || []);
+        setCollaborators(doc.collaborators || []);
+        setOwnerId(doc.createdBy || (doc.createdBy?._id));
       });
 
     fetch(`http://localhost:5000/api/document/${documentId}/spreadsheet`, {
@@ -298,6 +333,27 @@ function SpreadsheetPage() {
           style={{width: '100%', borderRadius: 8, border: '1px solid #b3c7f9', padding: '0.5rem 1rem', fontSize: '1rem', marginTop: 8}}
         />
         <Button onClick={handleAddComment} variant="contained" sx={{mt: 1}}>Add Comment</Button>
+      </div>
+      <div style={{ margin: '2rem 0' }}>
+        <h3>Collaborators</h3>
+        {collaborators.length === 0 && <div>No collaborators yet.</div>}
+        {collaborators.map((collab) => (
+          <div key={collab.user._id || collab.user} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+            <span>{collab.user.name || collab.user.email || collab.user}</span>
+            <b style={{ marginLeft: 8 }}>{collab.role}</b>
+            {getCurrentUserId() === (ownerId?._id || ownerId) && (
+              <Select
+                value={collab.role}
+                onChange={e => handleRoleChange(collab.user._id || collab.user, e.target.value)}
+                size="small"
+                sx={{ ml: 1 }}
+              >
+                <MenuItem value="Editor">Editor</MenuItem>
+                <MenuItem value="Viewer">Viewer</MenuItem>
+              </Select>
+            )}
+          </div>
+        ))}
       </div>
       <Snackbar open={!!saveStatus} autoHideDuration={2000} onClose={() => setSaveStatus(null)} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
         {saveStatus === 'success' ? (

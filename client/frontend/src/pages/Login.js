@@ -116,6 +116,15 @@ function Login() {
           >
             New user? Sign Up
           </Button>
+          <Button
+            variant="text"
+            color="primary"
+            fullWidth
+            sx={{ mt: 1 }}
+            onClick={() => navigate("/forgot-password")}
+          >
+            Forgot Password?
+          </Button>
         </form>
       </Container>
     </div>

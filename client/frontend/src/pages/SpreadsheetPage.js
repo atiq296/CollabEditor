@@ -9,7 +9,27 @@ import {
   Snackbar,
   Select,
   MenuItem,
+  Avatar,
+  Chip,
+  Card,
+  CardContent,
+  Grid,
+  IconButton,
+  Tooltip,
+  Stack,
 } from "@mui/material";
+import {
+  Person,
+  AdminPanelSettings,
+  ArrowBack,
+  FileUpload,
+  FileDownload,
+  Save,
+  Share,
+  Settings,
+  TableChart,
+  Description,
+} from "@mui/icons-material";
 import Handsontable from "handsontable";
 import { HotTable } from "@handsontable/react";
 import { registerAllModules } from "handsontable/registry";
@@ -28,12 +48,14 @@ function SpreadsheetPage() {
   const [isEditor, setIsEditor] = useState(false);
   const [loading, setLoading] = useState(true);
   const importInputRef = useRef(null);
-  const [saveStatus, setSaveStatus] = useState(null); // 'success' | 'error' | null
+  const [saveStatus, setSaveStatus] = useState(null);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
   const [title, setTitle] = useState('Untitled Spreadsheet');
   const [collaborators, setCollaborators] = useState([]);
   const [ownerId, setOwnerId] = useState(null);
+  const [user, setUser] = useState(null);
+  const hotTableRef = useRef(null);
 
   const getToken = () => localStorage.getItem("token") || "";
   const getUserId = () => {
@@ -52,6 +74,68 @@ function SpreadsheetPage() {
       return payload.id;
     } catch {
       return null;
+    }
+  };
+
+  // Function to expand data array with new rows and columns
+  const expandData = (currentData, newRows = 0, newCols = 0) => {
+    const currentRows = currentData.length;
+    const currentCols = currentData[0] ? currentData[0].length : 0;
+    
+    let expandedData = [...currentData];
+    
+    // Add new rows if needed
+    if (newRows > 0) {
+      for (let i = 0; i < newRows; i++) {
+        const newRow = Array.from({ length: currentCols + newCols }, () => "");
+        expandedData.push(newRow);
+      }
+    }
+    
+    // Add new columns if needed
+    if (newCols > 0) {
+      expandedData = expandedData.map(row => {
+        const newColsArray = Array.from({ length: newCols }, () => "");
+        return [...row, ...newColsArray];
+      });
+    }
+    
+    return expandedData;
+  };
+
+  // Function to check if expansion is needed
+  const checkAndExpand = (row, col, value) => {
+    if (!value || value === "") return;
+    
+    const currentData = [...data];
+    const currentRows = currentData.length;
+    const currentCols = currentData[0] ? currentData[0].length : 0;
+    
+    let needsExpansion = false;
+    let newRows = 0;
+    let newCols = 0;
+    
+    // Check if we need to add rows (if data is entered in the last few rows)
+    if (row >= currentRows - 3) {
+      newRows = Math.max(10, Math.ceil((row + 5 - currentRows) / 10) * 10);
+      needsExpansion = true;
+    }
+    
+    // Check if we need to add columns (if data is entered in the last few columns)
+    if (col >= currentCols - 3) {
+      newCols = Math.max(5, Math.ceil((col + 3 - currentCols) / 5) * 5);
+      needsExpansion = true;
+    }
+    
+    if (needsExpansion) {
+      const expandedData = expandData(currentData, newRows, newCols);
+      setData(expandedData);
+      
+      // Update the Handsontable instance to reflect the new dimensions
+      if (hotTableRef.current && hotTableRef.current.hotInstance) {
+        const hot = hotTableRef.current.hotInstance;
+        hot.loadData(expandedData);
+      }
     }
   };
 
@@ -77,6 +161,14 @@ function SpreadsheetPage() {
     const token = getToken();
     const userId = getUserId();
 
+    // Fetch user profile
+    fetch("http://localhost:5000/api/auth/me", {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => setUser(data))
+      .catch(() => setUser(null));
+
     fetch(`http://localhost:5000/api/document/${documentId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -100,8 +192,8 @@ function SpreadsheetPage() {
       .then((res) => res.json())
       .then((fetchedData) => {
         if (!Array.isArray(fetchedData) || fetchedData.length === 0) {
-          const rows = 20,
-            cols = 10;
+          const rows = 30, // Increased initial size
+            cols = 15;     // Increased initial size
           const empty = Array.from({ length: rows }, () =>
             Array.from({ length: cols }, () => "")
           );
@@ -213,41 +305,149 @@ function SpreadsheetPage() {
     setTimeout(() => setSaveStatus(null), 2000);
   };
 
+  // Calculate statistics
+  const totalRows = data.length;
+  const totalCols = data[0] ? data[0].length : 0;
+  const filledCells = data.reduce((count, row) => 
+    count + row.filter(cell => cell && cell.toString().trim() !== '').length, 0
+  );
+  const totalCells = totalRows * totalCols;
+  const fillPercentage = totalCells > 0 ? Math.round((filledCells / totalCells) * 100) : 0;
+
   if (loading) return <CircularProgress sx={{ mt: 4 }} />;
 
   return (
-    <Box className="spreadsheet-root">
-      <div className="spreadsheet-header-row">
+    <div className="spreadsheet-root">
+      {/* Enhanced Header with User Info */}
+      <header className="spreadsheet-header">
+        <div className="spreadsheet-header-content">
+          <div className="spreadsheet-user-section">
+            <div className="spreadsheet-user-profile">
+              <Avatar 
+                className="spreadsheet-user-avatar"
+                sx={{ 
+                  width: 56, 
+                  height: 56, 
+                  bgcolor: '#21c47b',
+                  fontSize: '1.5rem',
+                  fontWeight: 'bold'
+                }}
+              >
+                {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+              </Avatar>
+              <div className="spreadsheet-user-details">
+                <Typography variant="h6" className="spreadsheet-user-name">
+                  {user?.name || 'User'}
+                </Typography>
+                <Typography variant="body2" className="spreadsheet-user-email">
+                  {user?.email || 'user@example.com'}
+                </Typography>
+                <Chip 
+                  icon={<AdminPanelSettings />}
+                  label={user?.role || 'User'}
+                  size="small"
+                  className="spreadsheet-user-role"
+                  color={user?.role === 'admin' ? 'error' : 'primary'}
+                />
+              </div>
+            </div>
+          </div>
+          
+          <div className="spreadsheet-stats-section">
+            <Grid container spacing={2} className="spreadsheet-stats-grid">
+              <Grid item xs={6} sm={3}>
+                <Card className="spreadsheet-stat-card">
+                  <CardContent>
+                    <Typography variant="h4" className="spreadsheet-stat-number">
+                      {totalRows}
+                    </Typography>
+                    <Typography variant="body2" className="spreadsheet-stat-label">
+                      Total Rows
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Card className="spreadsheet-stat-card">
+                  <CardContent>
+                    <Typography variant="h4" className="spreadsheet-stat-number">
+                      {totalCols}
+                    </Typography>
+                    <Typography variant="body2" className="spreadsheet-stat-label">
+                      Total Columns
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Card className="spreadsheet-stat-card">
+                  <CardContent>
+                    <Typography variant="h4" className="spreadsheet-stat-number">
+                      {filledCells}
+                    </Typography>
+                    <Typography variant="body2" className="spreadsheet-stat-label">
+                      Filled Cells
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Card className="spreadsheet-stat-card">
+                  <CardContent>
+                    <Typography variant="h4" className="spreadsheet-stat-number">
+                      {fillPercentage}%
+                    </Typography>
+                    <Typography variant="body2" className="spreadsheet-stat-label">
+                      Fill Rate
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
+          </div>
+
+          <div className="spreadsheet-header-actions">
+            <Tooltip title="Settings">
+              <IconButton className="spreadsheet-action-btn">
+                <Settings />
+              </IconButton>
+            </Tooltip>
         <Button
           variant="outlined"
           color="primary"
           className="spreadsheet-back-btn"
           onClick={() => navigate("/dashboard")}
+              startIcon={<ArrowBack />}
         >
-          ← Back to Dashboard
+              Back to Dashboard
         </Button>
+          </div>
+        </div>
+      </header>
+
+      <main className="spreadsheet-main-box">
+        <div className="spreadsheet-title-section">
         <input
           className="spreadsheet-title-input"
           value={title}
           onChange={e => setTitle(e.target.value)}
-          style={{
-            fontWeight: 800,
-            fontSize: '1.5rem',
-            textAlign: 'center',
-            border: 'none',
-            background: 'transparent',
-            color: '#274690',
-            outline: 'none',
-            width: '100%',
-            maxWidth: 400,
-          }}
-        />
-        <div style={{ display: 'flex', gap: '0.7rem' }}>
+            placeholder="Enter spreadsheet title..."
+          />
+        </div>
+
+        {!isEditor && (
+          <Alert severity="info" className="spreadsheet-view-only-alert">
+            View-only access. You cannot edit this spreadsheet.
+          </Alert>
+        )}
+
+        <div className="spreadsheet-actions">
           <Button
             variant="outlined"
             color="primary"
-            className="spreadsheet-import-btn"
+            className="spreadsheet-action-button"
             onClick={handleImportClick}
+            startIcon={<FileUpload />}
           >
             Import
           </Button>
@@ -261,33 +461,32 @@ function SpreadsheetPage() {
           <Button
             variant="contained"
             color="success"
-            className="spreadsheet-export-btn"
+            className="spreadsheet-action-button"
             onClick={handleExportToExcel}
+            startIcon={<FileDownload />}
           >
             Export to Excel
           </Button>
           <Button
             variant="contained"
-            color="success"
-            className="spreadsheet-save-btn"
+            color="primary"
+            className="spreadsheet-action-button"
             onClick={handleSave}
+            startIcon={<Save />}
           >
             Save Spreadsheet
           </Button>
         </div>
-      </div>
-      {!isEditor && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          View-only access. You cannot edit this spreadsheet.
-        </Alert>
-      )}
+
+        <div className="spreadsheet-table-container">
       <HotTable
+            ref={hotTableRef}
         data={data}
         colHeaders
         rowHeaders
         readOnly={!isEditor}
         width="100%"
-        height="75vh"
+            height="70vh"
         stretchH="all"
         licenseKey="non-commercial-and-evaluation"
         contextMenu={true}
@@ -309,14 +508,33 @@ function SpreadsheetPage() {
         fixedColumnsLeft={1}
         afterChange={(changes) => {
           if (changes) {
-            setData((prev) => [...prev]);
+                const newData = [...data];
+                changes.forEach(([row, prop, oldValue, newValue]) => {
+                  if (newData[row]) {
+                    newData[row][prop] = newValue;
+                    // Check if we need to expand the grid
+                    if (isEditor) {
+                      checkAndExpand(row, prop, newValue);
+                    }
+                  }
+                });
+                setData(newData);
           }
         }}
         className="spreadsheet-table"
       />
-      <div className="spreadsheet-comments-list" style={{marginTop: 24, marginBottom: 24}}>
-        <Typography variant="h6">Comments</Typography>
-        {comments.length === 0 && <div>No comments yet.</div>}
+        </div>
+
+        <div className="spreadsheet-bottom-section">
+          <div className="spreadsheet-comments-section">
+            <Typography variant="h6" className="spreadsheet-section-title">
+              💬 Comments ({comments.length})
+            </Typography>
+            {comments.length === 0 && (
+              <Typography variant="body2" className="spreadsheet-empty-text">
+                No comments yet. Start the conversation!
+              </Typography>
+            )}
         {comments.map((c, i) => (
           <div key={i} className="spreadsheet-comment-item">
             <span className="spreadsheet-comment-author">
@@ -325,28 +543,53 @@ function SpreadsheetPage() {
             : {c.text}
           </div>
         ))}
+            <div className="spreadsheet-comment-input">
         <textarea
           value={newComment}
           onChange={e => setNewComment(e.target.value)}
           placeholder="Add a comment..."
           rows={2}
-          style={{width: '100%', borderRadius: 8, border: '1px solid #b3c7f9', padding: '0.5rem 1rem', fontSize: '1rem', marginTop: 8}}
-        />
-        <Button onClick={handleAddComment} variant="contained" sx={{mt: 1}}>Add Comment</Button>
+                className="spreadsheet-comment-textarea"
+              />
+              <Button 
+                onClick={handleAddComment} 
+                variant="contained" 
+                className="spreadsheet-comment-btn"
+                startIcon={<Share />}
+              >
+                Add Comment
+              </Button>
+            </div>
       </div>
-      <div style={{ margin: '2rem 0' }}>
-        <h3>Collaborators</h3>
-        {collaborators.length === 0 && <div>No collaborators yet.</div>}
+
+          <div className="spreadsheet-collaborators-section">
+            <Typography variant="h6" className="spreadsheet-section-title">
+              👥 Collaborators ({collaborators.length})
+            </Typography>
+            {collaborators.length === 0 && (
+              <Typography variant="body2" className="spreadsheet-empty-text">
+                No collaborators yet.
+              </Typography>
+            )}
         {collaborators.map((collab) => (
-          <div key={collab.user._id || collab.user} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-            <span>{collab.user.name || collab.user.email || collab.user}</span>
-            <b style={{ marginLeft: 8 }}>{collab.role}</b>
+              <div key={collab.user._id || collab.user} className="spreadsheet-collaborator-item">
+                <div className="spreadsheet-collaborator-info">
+                  <span className="spreadsheet-collaborator-name">
+                    {collab.user.name || collab.user.email || collab.user}
+                  </span>
+                  <Chip 
+                    label={collab.role}
+                    size="small"
+                    color={collab.role === 'Editor' ? 'primary' : 'default'}
+                    className="spreadsheet-collaborator-role"
+                  />
+                </div>
             {getCurrentUserId() === (ownerId?._id || ownerId) && (
               <Select
                 value={collab.role}
                 onChange={e => handleRoleChange(collab.user._id || collab.user, e.target.value)}
                 size="small"
-                sx={{ ml: 1 }}
+                    className="spreadsheet-role-select"
               >
                 <MenuItem value="Editor">Editor</MenuItem>
                 <MenuItem value="Viewer">Viewer</MenuItem>
@@ -355,6 +598,9 @@ function SpreadsheetPage() {
           </div>
         ))}
       </div>
+        </div>
+      </main>
+
       <Snackbar open={!!saveStatus} autoHideDuration={2000} onClose={() => setSaveStatus(null)} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
         {saveStatus === 'success' ? (
           <Alert severity="success" sx={{ width: '100%' }}>
@@ -366,7 +612,7 @@ function SpreadsheetPage() {
           </Alert>
         ) : null}
       </Snackbar>
-    </Box>
+    </div>
   );
 }
 

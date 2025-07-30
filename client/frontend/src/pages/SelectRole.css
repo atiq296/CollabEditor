@@ -1,4 +1,4 @@
-/* Signup Page Styles */
+/* Role Selection Page Styles */
 html, body {
   height: 100%;
   margin: 0;
@@ -6,7 +6,7 @@ html, body {
   box-sizing: border-box;
 }
 
-.signup-root {
+.role-root {
   min-height: 100vh;
   width: 100vw;
   background: linear-gradient(135deg, #0a2342 0%, #274690 100%);
@@ -21,24 +21,24 @@ html, body {
 }
 
 /* Custom Scrollbar Styles */
-.signup-root::-webkit-scrollbar {
+.role-root::-webkit-scrollbar {
   width: 12px;
 }
-.signup-root::-webkit-scrollbar-thumb {
+.role-root::-webkit-scrollbar-thumb {
   background: #274690;
   border-radius: 8px;
 }
-.signup-root::-webkit-scrollbar-track {
+.role-root::-webkit-scrollbar-track {
   background: #e3eafc;
   border-radius: 8px;
 }
-.signup-root {
+.role-root {
   scrollbar-width: thin;
   scrollbar-color: #274690 #e3eafc;
 }
 
 /* Enhanced Header Styles */
-.signup-header {
+.role-header {
   width: 100%;
   max-width: 1400px;
   padding: 2rem 2.5rem 1.5rem 2.5rem;
@@ -46,7 +46,7 @@ html, body {
   margin: 0 auto;
 }
 
-.signup-header-content {
+.role-header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -54,23 +54,23 @@ html, body {
   gap: 1rem;
 }
 
-.signup-logo-section {
+.role-logo-section {
   display: flex;
   align-items: center;
   gap: 1rem;
 }
 
-.signup-logo-icon {
+.role-logo-icon {
   filter: drop-shadow(0 4px 12px rgba(0, 255, 255, 0.3));
 }
 
-.signup-logo-text {
+.role-logo-text {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
 }
 
-.signup-logo-title {
+.role-logo-title {
   color: #fff !important;
   font-weight: 900 !important;
   margin: 0 !important;
@@ -79,7 +79,7 @@ html, body {
   text-shadow: 0 2px 12px rgba(0, 255, 255, 0.3) !important;
 }
 
-.signup-logo-subtitle {
+.role-logo-subtitle {
   color: rgba(255, 255, 255, 0.8) !important;
   margin: 0 !important;
   font-size: 0.85rem !important;
@@ -87,13 +87,13 @@ html, body {
   letter-spacing: 1px !important;
 }
 
-.signup-header-actions {
+.role-header-actions {
   display: flex;
   gap: 1rem;
   align-items: center;
 }
 
-.signup-back-btn {
+.role-back-btn {
   border-color: rgba(255, 255, 255, 0.3) !important;
   color: #fff !important;
   font-weight: 600 !important;
@@ -103,14 +103,14 @@ html, body {
   padding: 0.75rem 1.5rem !important;
 }
 
-.signup-back-btn:hover {
+.role-back-btn:hover {
   background: rgba(255, 255, 255, 0.2) !important;
   border-color: #fff !important;
   transform: translateY(-2px);
 }
 
 /* Main Content Styles */
-.signup-main {
+.role-main {
   max-width: 1400px;
   margin: 0 auto;
   padding: 2rem 2.5rem 3rem 2.5rem;
@@ -120,23 +120,23 @@ html, body {
   min-height: calc(100vh - 200px);
 }
 
-.signup-content {
+.role-content {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4rem;
   width: 100%;
   max-width: 1200px;
-  align-items: center;
+  align-items: start;
 }
 
 /* Form Container */
-.signup-form-container {
+.role-form-container {
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
 }
 
-.signup-form-card {
+.role-form-card {
   background: rgba(255, 255, 255, 0.95) !important;
   border-radius: 20px !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15) !important;
@@ -144,90 +144,143 @@ html, body {
   backdrop-filter: blur(10px) !important;
   transition: all 0.3s !important;
   width: 100%;
-  max-width: 450px;
+  max-width: 500px;
 }
 
-.signup-form-card:hover {
+.role-form-card:hover {
   transform: translateY(-5px) !important;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2) !important;
 }
 
-.signup-form-content {
+.role-form-content {
   padding: 3rem 2.5rem !important;
 }
 
-.signup-form-header {
+.role-form-header {
   text-align: center;
   margin-bottom: 2rem;
 }
 
-.signup-form-title {
+.role-form-title {
   color: #274690 !important;
   font-weight: 900 !important;
   margin-bottom: 0.5rem !important;
   font-size: 2.2rem !important;
 }
 
-.signup-form-subtitle {
+.role-form-subtitle {
   color: #666 !important;
   font-size: 1.1rem !important;
   line-height: 1.5 !important;
 }
 
-.signup-error-alert {
+.role-error-alert, .role-success-alert {
   margin-bottom: 1.5rem !important;
   border-radius: 8px !important;
 }
 
-.signup-form {
+.role-form {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 2rem;
 }
 
-.signup-input {
+.role-form-control {
   margin-bottom: 0 !important;
 }
 
-.signup-input .MuiInputBase-root {
+.role-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Role Option Cards */
+.role-option-card {
   background: rgba(255, 255, 255, 0.8) !important;
-  border-radius: 12px !important;
+  border-radius: 16px !important;
+  border: 2px solid transparent !important;
   transition: all 0.3s !important;
+  cursor: pointer !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
 }
 
-.signup-input .MuiInputBase-root:hover {
-  background: rgba(255, 255, 255, 0.9) !important;
+.role-option-card:hover {
+  background: rgba(255, 255, 255, 0.95) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
 }
 
-.signup-input .Mui-focused .MuiInputBase-root {
-  background: #fff !important;
-  box-shadow: 0 0 0 2px rgba(39, 70, 144, 0.2) !important;
-}
-
-.signup-input .MuiOutlinedInput-notchedOutline {
-  border-color: rgba(39, 70, 144, 0.2) !important;
-  border-radius: 12px !important;
-}
-
-.signup-input .Mui-focused .MuiOutlinedInput-notchedOutline {
+.role-option-selected {
   border-color: #274690 !important;
-  border-width: 2px !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  box-shadow: 0 4px 20px rgba(39, 70, 144, 0.2) !important;
 }
 
-.signup-input-icon {
+.role-option-content {
+  padding: 1.5rem !important;
+}
+
+.role-option-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.role-option-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.role-option-icon svg {
+  font-size: 1.8rem !important;
+}
+
+.role-option-info {
+  flex: 1;
+}
+
+.role-option-title {
   color: #274690 !important;
+  font-weight: 700 !important;
+  margin-bottom: 0.25rem !important;
   font-size: 1.2rem !important;
 }
 
-.signup-password-toggle {
+.role-option-description {
   color: #666 !important;
+  font-size: 0.9rem !important;
+  line-height: 1.4 !important;
 }
 
-.signup-password-toggle:hover {
+.role-radio {
   color: #274690 !important;
 }
 
-.signup-submit-btn {
+.role-radio.Mui-checked {
+  color: #274690 !important;
+}
+
+.role-option-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.role-feature-chip {
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  border-radius: 12px !important;
+}
+
+.role-submit-btn {
   background: linear-gradient(90deg, #00FFFF 0%, #8000FF 100%) !important;
   color: #fff !important;
   font-weight: 700 !important;
@@ -236,60 +289,29 @@ html, body {
   font-size: 1.1rem !important;
   box-shadow: 0 4px 16px rgba(0, 255, 255, 0.3) !important;
   transition: all 0.3s !important;
-  margin-top: 1rem !important;
 }
 
-.signup-submit-btn:hover {
+.role-submit-btn:hover:not(:disabled) {
   background: linear-gradient(90deg, #8000FF 0%, #00FFFF 100%) !important;
   transform: translateY(-3px) !important;
   box-shadow: 0 8px 24px rgba(0, 255, 255, 0.4) !important;
 }
 
-.signup-form-footer {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  margin-top: 1rem;
-}
-
-.signup-login-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid rgba(39, 70, 144, 0.1);
-}
-
-.signup-login-text {
+.role-submit-btn:disabled {
+  background: #ccc !important;
   color: #666 !important;
-  font-size: 1rem !important;
-}
-
-.signup-login-btn {
-  border-color: #274690 !important;
-  color: #274690 !important;
-  font-weight: 600 !important;
-  border-radius: 12px !important;
-  padding: 0.75rem 2rem !important;
-  transition: all 0.3s !important;
-}
-
-.signup-login-btn:hover {
-  background: #274690 !important;
-  color: #fff !important;
-  transform: translateY(-2px) !important;
-  box-shadow: 0 4px 12px rgba(39, 70, 144, 0.3) !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
 }
 
 /* Benefits Section */
-.signup-benefits {
+.role-benefits {
   display: flex;
   flex-direction: column;
   gap: 2rem;
 }
 
-.signup-benefits-title {
+.role-benefits-title {
   color: #fff !important;
   font-weight: 900 !important;
   font-size: 2.2rem !important;
@@ -297,13 +319,13 @@ html, body {
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.2) !important;
 }
 
-.signup-benefits-grid {
+.role-benefits-grid {
   display: flex;
   flex-direction: column;
   gap: 2rem;
 }
 
-.signup-benefit-item {
+.role-benefit-item {
   background: rgba(255, 255, 255, 0.95) !important;
   border-radius: 16px !important;
   padding: 2rem !important;
@@ -316,30 +338,30 @@ html, body {
   gap: 1.5rem;
 }
 
-.signup-benefit-item:hover {
+.role-benefit-item:hover {
   transform: translateY(-5px) !important;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
 }
 
-.signup-benefit-icon {
+.role-benefit-icon {
   font-size: 2.5rem !important;
   color: #274690 !important;
   flex-shrink: 0;
   margin-top: 0.25rem;
 }
 
-.signup-benefit-content {
+.role-benefit-content {
   flex: 1;
 }
 
-.signup-benefit-title {
+.role-benefit-title {
   color: #274690 !important;
   font-weight: 700 !important;
   margin-bottom: 0.75rem !important;
   font-size: 1.3rem !important;
 }
 
-.signup-benefit-description {
+.role-benefit-description {
   color: #666 !important;
   line-height: 1.6 !important;
   font-size: 1rem !important;
@@ -347,64 +369,74 @@ html, body {
 
 /* Responsive Design */
 @media (max-width: 1400px) {
-  .signup-header {
+  .role-header {
     max-width: 95vw;
     padding: 1.5rem 1rem 1rem 1rem;
   }
   
-  .signup-main {
+  .role-main {
     max-width: 95vw;
     padding: 2rem 1.5rem 2rem 1.5rem;
   }
 }
 
 @media (max-width: 900px) {
-  .signup-content {
+  .role-content {
     grid-template-columns: 1fr;
     gap: 3rem;
   }
   
-  .signup-logo-section {
+  .role-logo-section {
     flex-direction: column;
     text-align: center;
   }
   
-  .signup-header-actions {
+  .role-header-actions {
     justify-content: center;
     width: 100%;
   }
   
-  .signup-benefits {
+  .role-benefits {
     order: -1;
   }
 }
 
 @media (max-width: 700px) {
-  .signup-header, .signup-main {
+  .role-header, .role-main {
     max-width: 98vw;
     padding: 1rem 0.5rem;
   }
   
-  .signup-form-content {
+  .role-form-content {
     padding: 2rem 1.5rem !important;
   }
   
-  .signup-form-title {
+  .role-form-title {
     font-size: 1.8rem !important;
   }
   
-  .signup-benefits-title {
+  .role-benefits-title {
     font-size: 1.8rem !important;
   }
   
-  .signup-benefit-item {
+  .role-benefit-item {
     padding: 1.5rem !important;
     flex-direction: column;
     text-align: center;
     gap: 1rem;
   }
   
-  .signup-benefit-icon {
+  .role-benefit-icon {
     margin-top: 0;
+  }
+  
+  .role-option-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.75rem;
+  }
+  
+  .role-option-features {
+    justify-content: center;
   }
 } 

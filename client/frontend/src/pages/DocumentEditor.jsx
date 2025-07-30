@@ -2,7 +2,39 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import './DocumentEditor.css';
-import { CircularProgress, Menu, Snackbar, Alert, Select, MenuItem } from '@mui/material';
+import { 
+  CircularProgress, 
+  Menu, 
+  Snackbar, 
+  Alert, 
+  Select, 
+  MenuItem,
+  Typography,
+  Button,
+  Avatar,
+  Chip,
+  Card,
+  CardContent,
+  Grid,
+  IconButton,
+  Tooltip,
+  Box,
+} from '@mui/material';
+import {
+  Person,
+  AdminPanelSettings,
+  ArrowBack,
+  FileUpload,
+  FileDownload,
+  Save,
+  Share,
+  Settings,
+  Description,
+  AutoFixHigh,
+  Psychology,
+  Visibility,
+  VisibilityOff,
+} from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 
@@ -16,18 +48,16 @@ function DocumentEditor() {
   const [aiLoading, setAiLoading] = useState(false);
   const [activeUsers, setActiveUsers] = useState([]);
   const socketRef = useRef(null);
-  const quillRef = useRef(null); // <-- Add this line
-  // Export menu state
+  const quillRef = useRef(null);
   const [exportAnchorEl, setExportAnchorEl] = useState(null);
-  // Import file input ref
   const importInputRef = useRef(null);
-  const [saveStatus, setSaveStatus] = useState(null); // 'success' | 'error' | null
-  const [commentStatus, setCommentStatus] = useState(null); // 'success' | 'error' | null
+  const [saveStatus, setSaveStatus] = useState(null);
+  const [commentStatus, setCommentStatus] = useState(null);
   const [collaborators, setCollaborators] = useState([]);
   const [ownerId, setOwnerId] = useState(null);
+  const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
-  // Get username from token (simulate for now)
   const getToken = () => localStorage.getItem('token') || '';
   const getUsername = () => {
     const token = getToken();
@@ -70,6 +100,16 @@ function DocumentEditor() {
   };
 
   useEffect(() => {
+    const token = getToken();
+    
+    // Fetch user profile
+    fetch("http://localhost:5000/api/auth/me", {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => setUser(data))
+      .catch(() => setUser(null));
+
     const socket = io('http://localhost:5000');
     socketRef.current = socket;
     const username = getUsername();
@@ -146,6 +186,8 @@ function DocumentEditor() {
       });
       if (res.ok) {
         setSaveStatus('success');
+        // Notify dashboard to refresh
+        window.dispatchEvent(new Event('refreshDocs'));
       } else {
         setSaveStatus('error');
       }
@@ -287,24 +329,141 @@ function DocumentEditor() {
     if (improved) setContent(improved);
   };
 
+  // Calculate statistics
+  const wordCount = content.replace(/<[^>]+>/g, '').trim().split(/\s+/).filter(word => word.length > 0).length;
+  const charCount = content.replace(/<[^>]+>/g, '').length;
+  const paragraphCount = content.split('<p>').length - 1;
+  const lastModified = new Date().toLocaleDateString();
+
   return (
     <div className="doceditor-root">
+      {/* Enhanced Header with User Info */}
       <header className="doceditor-header">
-        <button
-          className="doceditor-btn"
-          style={{ marginBottom: 16 }}
+        <div className="doceditor-header-content">
+          <div className="doceditor-user-section">
+            <div className="doceditor-user-profile">
+              <Avatar 
+                className="doceditor-user-avatar"
+                sx={{ 
+                  width: 56, 
+                  height: 56, 
+                  bgcolor: '#274690',
+                  fontSize: '1.5rem',
+                  fontWeight: 'bold'
+                }}
+              >
+                {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+              </Avatar>
+              <div className="doceditor-user-details">
+                <Typography variant="h6" className="doceditor-user-name">
+                  {user?.name || 'User'}
+                </Typography>
+                <Typography variant="body2" className="doceditor-user-email">
+                  {user?.email || 'user@example.com'}
+                </Typography>
+                <Chip 
+                  icon={<AdminPanelSettings />}
+                  label={user?.role || 'User'}
+                  size="small"
+                  className="doceditor-user-role"
+                  color={user?.role === 'admin' ? 'error' : 'primary'}
+                />
+              </div>
+            </div>
+          </div>
+          
+          <div className="doceditor-stats-section">
+            <Grid container spacing={2} className="doceditor-stats-grid">
+              <Grid item xs={6} sm={3}>
+                <Card className="doceditor-stat-card">
+                  <CardContent>
+                    <Typography variant="h4" className="doceditor-stat-number">
+                      {wordCount}
+                    </Typography>
+                    <Typography variant="body2" className="doceditor-stat-label">
+                      Words
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Card className="doceditor-stat-card">
+                  <CardContent>
+                    <Typography variant="h4" className="doceditor-stat-number">
+                      {charCount}
+                    </Typography>
+                    <Typography variant="body2" className="doceditor-stat-label">
+                      Characters
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Card className="doceditor-stat-card">
+                  <CardContent>
+                    <Typography variant="h4" className="doceditor-stat-number">
+                      {paragraphCount}
+                    </Typography>
+                    <Typography variant="body2" className="doceditor-stat-label">
+                      Paragraphs
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Card className="doceditor-stat-card">
+                  <CardContent>
+                    <Typography variant="h4" className="doceditor-stat-number">
+                      {activeUsers.length}
+                    </Typography>
+                    <Typography variant="body2" className="doceditor-stat-label">
+                      Active Users
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
+          </div>
+
+          <div className="doceditor-header-actions">
+            <Tooltip title="Settings">
+              <IconButton className="doceditor-action-btn">
+                <Settings />
+              </IconButton>
+            </Tooltip>
+            <Button
+              variant="outlined"
+              color="primary"
+              className="doceditor-back-btn"
           onClick={() => navigate('/dashboard')}
-        >
-          ← Back to Dashboard
-        </button>
-        <div className="doceditor-title-row">
+              startIcon={<ArrowBack />}
+            >
+              Back to Dashboard
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <main className="doceditor-main-box">
+        <div className="doceditor-title-section">
           <input
             className="doceditor-title-input"
             value={title}
             onChange={handleTitleChange}
+            placeholder="Enter document title..."
           />
-          <div className="doceditor-header-actions">
-            <button className="doceditor-btn" onClick={handleImportClick}>Import</button>
+        </div>
+
+        <div className="doceditor-actions">
+          <Button
+            variant="outlined"
+            color="primary"
+            className="doceditor-action-button"
+            onClick={handleImportClick}
+            startIcon={<FileUpload />}
+          >
+            Import
+          </Button>
             <input
               type="file"
               accept=".docx,.html"
@@ -312,41 +471,94 @@ function DocumentEditor() {
               style={{ display: 'none' }}
               onChange={handleImportFile}
             />
-            <button className="doceditor-btn" onClick={handleExportClick}>Export</button>
+          <Button
+            variant="outlined"
+            color="secondary"
+            className="doceditor-action-button"
+            onClick={handleExportClick}
+            startIcon={<FileDownload />}
+          >
+            Export
+          </Button>
             <Menu anchorEl={exportAnchorEl} open={Boolean(exportAnchorEl)} onClose={handleExportClose}>
               <MenuItem onClick={handleExportPDF}>Export as PDF</MenuItem>
               <MenuItem onClick={handleExportWord}>Export as Word</MenuItem>
             </Menu>
-            <button className="doceditor-btn" onClick={handleSave}>Save</button>
-            <button className="doceditor-btn" onClick={() => setShowSidebar(s => !s)}>{showSidebar ? 'Hide' : 'Show'} Comments</button>
+          <Button
+            variant="contained"
+            color="primary"
+            className="doceditor-action-button"
+            onClick={handleSave}
+            startIcon={<Save />}
+          >
+            Save Document
+          </Button>
+          <Button
+            variant="outlined"
+            color="info"
+            className="doceditor-action-button"
+            onClick={() => setShowSidebar(s => !s)}
+            startIcon={showSidebar ? <VisibilityOff /> : <Visibility />}
+          >
+            {showSidebar ? 'Hide' : 'Show'} Sidebar
+          </Button>
+        </div>
+
+        <div className="doceditor-ai-section">
+          <Typography variant="h6" className="doceditor-ai-title">
+            🤖 AI Writing Assistant
+          </Typography>
+          <div className="doceditor-ai-actions">
+            <Button
+              variant="outlined"
+              color="warning"
+              className="doceditor-ai-button"
+              onClick={handleImproveGrammar}
+              disabled={aiLoading}
+              startIcon={<AutoFixHigh />}
+            >
+              Improve Grammar
+            </Button>
+            <Button
+              variant="outlined"
+              color="info"
+              className="doceditor-ai-button"
+              onClick={handleEnhanceTone}
+              disabled={aiLoading}
+              startIcon={<Psychology />}
+            >
+              Enhance Tone
+            </Button>
+            {aiLoading && <CircularProgress size={24} sx={{ ml: 2, color: '#274690' }} />}
           </div>
         </div>
-        <div className="doceditor-users">
-          Active Users: {activeUsers.map((u, i) => <span key={i} className="doceditor-user">{u}</span>)}
-        </div>
-        <div className="doceditor-ai-row">
-          <button className="doceditor-btn" onClick={handleImproveGrammar} disabled={aiLoading}>Improve Grammar</button>
-          <button className="doceditor-btn" onClick={handleEnhanceTone} disabled={aiLoading}>Enhance Tone</button>
-          {aiLoading && <CircularProgress size={20} sx={{ ml: 2, color: '#274690' }} />}
-        </div>
-      </header>
-      <div className="doceditor-main-row">
-        <div className="doceditor-editor-box">
+
+        <div className="doceditor-content-row">
+          <div className="doceditor-editor-container">
           <ReactQuill
-            ref={quillRef} // <-- Attach the ref here
+              ref={quillRef}
             theme="snow"
             value={content}
             onChange={handleChange}
             placeholder="Start typing here..."
             modules={DocumentEditor.modules}
             formats={DocumentEditor.formats}
+              className="doceditor-quill"
           />
         </div>
+          
         {showSidebar && (
           <aside className="doceditor-sidebar">
-            <h3>Comments</h3>
+              <div className="doceditor-sidebar-section">
+                <Typography variant="h6" className="doceditor-section-title">
+                  💬 Comments ({comments.length})
+                </Typography>
             <div className="doceditor-comments-list">
-              {comments.length === 0 && <div className="doceditor-no-comments">No comments yet.</div>}
+                  {comments.length === 0 && (
+                    <Typography variant="body2" className="doceditor-empty-text">
+                      No comments yet. Start the conversation!
+                    </Typography>
+                  )}
               {comments.map((c, i) => (
                 <div key={i} className="doceditor-comment-item">
                   <div className="doceditor-comment-meta">
@@ -354,7 +566,13 @@ function DocumentEditor() {
                       {c.author && typeof c.author === 'object' ? c.author.name : c.author}
                     </span>
                     {c.date && <span className="doceditor-comment-date">{c.date}</span>}
-                    <button className="doceditor-comment-delete" onClick={() => handleDeleteComment(i)}>Delete</button>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleDeleteComment(i)}
+                          className="doceditor-comment-delete"
+                        >
+                          ×
+                        </IconButton>
                   </div>
                   <div className="doceditor-comment-text">{c.text}</div>
                 </div>
@@ -366,22 +584,47 @@ function DocumentEditor() {
                 onChange={e => setNewComment(e.target.value)}
                 placeholder="Add a comment..."
                 rows={2}
-              />
-              <button className="doceditor-btn" onClick={handleAddComment}>Add Comment</button>
+                    className="doceditor-comment-textarea"
+                  />
+                  <Button 
+                    onClick={handleAddComment} 
+                    variant="contained" 
+                    className="doceditor-comment-btn"
+                    startIcon={<Share />}
+                  >
+                    Add Comment
+                  </Button>
+                </div>
             </div>
-            <div className="doceditor-collaborators-list" style={{ margin: '2rem 0' }}>
-              <h3>Collaborators</h3>
-              {collaborators.length === 0 && <div>No collaborators yet.</div>}
+
+              <div className="doceditor-sidebar-section">
+                <Typography variant="h6" className="doceditor-section-title">
+                  👥 Collaborators ({collaborators.length})
+                </Typography>
+                {collaborators.length === 0 && (
+                  <Typography variant="body2" className="doceditor-empty-text">
+                    No collaborators yet.
+                  </Typography>
+                )}
               {collaborators.map((collab) => (
-                <div key={collab.user._id || collab.user} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                  <span>{collab.user.name || collab.user.email || collab.user}</span>
-                  <b style={{ marginLeft: 8 }}>{collab.role}</b>
+                  <div key={collab.user._id || collab.user} className="doceditor-collaborator-item">
+                    <div className="doceditor-collaborator-info">
+                      <span className="doceditor-collaborator-name">
+                        {collab.user.name || collab.user.email || collab.user}
+                      </span>
+                      <Chip 
+                        label={collab.role}
+                        size="small"
+                        color={collab.role === 'Editor' ? 'primary' : 'default'}
+                        className="doceditor-collaborator-role"
+                      />
+                    </div>
                   {getCurrentUserId() === (ownerId?._id || ownerId) && (
                     <Select
                       value={collab.role}
                       onChange={e => handleRoleChange(collab.user._id || collab.user, e.target.value)}
                       size="small"
-                      sx={{ ml: 1 }}
+                        className="doceditor-role-select"
                     >
                       <MenuItem value="Editor">Editor</MenuItem>
                       <MenuItem value="Viewer">Viewer</MenuItem>
@@ -390,9 +633,28 @@ function DocumentEditor() {
                 </div>
               ))}
             </div>
+
+              <div className="doceditor-sidebar-section">
+                <Typography variant="h6" className="doceditor-section-title">
+                  👤 Active Users ({activeUsers.length})
+                </Typography>
+                <div className="doceditor-active-users">
+                  {activeUsers.map((u, i) => (
+                    <Chip 
+                      key={i} 
+                      label={u} 
+                      size="small" 
+                      className="doceditor-user-chip"
+                      color="success"
+                    />
+                  ))}
+                </div>
+            </div>
           </aside>
         )}
       </div>
+      </main>
+
       <Snackbar open={!!saveStatus} autoHideDuration={2000} onClose={() => setSaveStatus(null)} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
         {saveStatus === 'success' ? (
           <Alert severity="success" sx={{ width: '100%' }}>

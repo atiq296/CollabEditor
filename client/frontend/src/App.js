@@ -18,20 +18,18 @@ function App() {
     <ChatProvider>
       <BrowserRouter>
         <CssBaseline />
-        <Container maxWidth="lg">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/editor/:id" element={<DocumentEditor />} />
-            <Route path="/spreadsheet/:id" element={<SpreadsheetPage />} />
-            <Route path="/select-role" element={<SelectRole />} />
-            <Route path="/verify-otp" element={<VerifyOtp />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password/:token" element={<ResetPassword />} />
-          </Routes>
-        </Container>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/editor/:id" element={<DocumentEditor />} />
+          <Route path="/spreadsheet/:id" element={<SpreadsheetPage />} />
+          <Route path="/select-role" element={<SelectRole />} />
+          <Route path="/verify-otp" element={<VerifyOtp />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
+        </Routes>
         <GlobalChat />
       </BrowserRouter>
     </ChatProvider>

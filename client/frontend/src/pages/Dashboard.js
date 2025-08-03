@@ -380,15 +380,15 @@ function Dashboard() {
           </div>
 
           <div className="dashboard-header-actions">
-            <Button
+        <Button
               variant="outlined"
               color="primary"
-              className="dashboard-logout-btn"
-              onClick={handleLogout}
+          className="dashboard-logout-btn"
+          onClick={handleLogout}
               startIcon={<Logout />}
-            >
+        >
               Logout
-            </Button>
+        </Button>
           </div>
         </div>
       </header>
@@ -674,7 +674,7 @@ function Dashboard() {
                 Copy this link to share the document:
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <TextField
+            <TextField
                   value={`${window.location.origin}${shareDocId ? (() => {
                     // Check if the current document is a spreadsheet
                     const currentDoc = [...textDocs, ...spreadsheets].find(doc => doc._id === shareDocId);
@@ -689,17 +689,17 @@ function Dashboard() {
                       return shareRole === 'Viewer' ? '/viewer/' : '/editor/';
                     }
                   })() + shareDocId : ''}`}
-                  InputProps={{ readOnly: true }}
-                  fullWidth
-                  size="small"
-                  sx={{ mr: 1 }}
-                />
+              InputProps={{ readOnly: true }}
+              fullWidth
+              size="small"
+              sx={{ mr: 1 }}
+            />
                 <Tooltip title="Copy link">
                   <IconButton onClick={handleShareWithLink}>
                     <ContentCopy />
                   </IconButton>
                 </Tooltip>
-              </Box>
+          </Box>
               <Typography variant="caption" color="text.secondary">
                 Anyone with this link can view the document. For editing permissions, use email sharing.
               </Typography>

@@ -688,8 +688,8 @@ function DocumentEditor() {
           </div>
         </div>
 
-        <div className="documenteditor-content">
-          <div className="documenteditor-editor-container">
+        <div className="doceditor-content-row">
+          <div className="doceditor-editor-container">
             {!canEdit() && (
               <Box sx={{ 
                 p: 2, 
@@ -711,36 +711,12 @@ function DocumentEditor() {
             theme="snow"
             value={content}
             onChange={handleChange}
-              placeholder="Start writing your document..."
-              modules={{
-                toolbar: [
-                  [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-                  ['bold', 'italic', 'underline', 'strike'],
-                  [{ 'color': [] }, { 'background': [] }],
-                  [{ 'align': [] }],
-                  [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                  ['blockquote', 'code-block'],
-                  ['link', 'image'],
-                  ['clean']
-                ],
-                clipboard: {
-                  matchVisual: false
-                }
-              }}
-              formats={[
-                'header', 'bold', 'italic', 'underline', 'strike',
-                'color', 'background', 'align', 'list', 'bullet',
-                'blockquote', 'code-block', 'link', 'image'
-              ]}
-              className="documenteditor-quill"
-              style={{
-                height: 'auto',
-                minHeight: '60vh',
-                maxHeight: '80vh',
-                overflowY: 'auto'
-              }}
+              placeholder={canEdit() ? "Start typing here..." : "Read-only document"}
+            modules={DocumentEditor.modules}
+            formats={DocumentEditor.formats}
+              className="doceditor-quill"
+              readOnly={!canEdit()}
           />
-        </div>
         </div>
           
         {showSidebar && (

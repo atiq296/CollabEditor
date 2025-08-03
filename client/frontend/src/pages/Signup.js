@@ -93,7 +93,7 @@ function Signup() {
               Back to Home
             </Button>
           </div>
-        </div>
+      </div>
       </header>
 
       {/* Main Content */}
@@ -108,26 +108,26 @@ function Signup() {
                   </Typography>
                   <Typography variant="body1" className="signup-form-subtitle">
                     Create your account and start collaborating today
-                  </Typography>
+          </Typography>
                 </div>
 
-                {error && (
+          {error && (
                   <Alert severity="error" className="signup-error-alert">
-                    {error}
+              {error}
                   </Alert>
-                )}
+          )}
 
                 <form onSubmit={handleSubmit} className="signup-form">
-                  <TextField
+          <TextField
                     label="Full Name"
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    fullWidth
-                    required
-                    margin="normal"
-                    className="signup-input"
+            type="text"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            fullWidth
+            required
+            margin="normal"
+            className="signup-input"
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
@@ -135,18 +135,18 @@ function Signup() {
                         </InputAdornment>
                       ),
                     }}
-                  />
+          />
 
-                  <TextField
+          <TextField
                     label="Email Address"
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    fullWidth
-                    required
-                    margin="normal"
-                    className="signup-input"
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            fullWidth
+            required
+            margin="normal"
+            className="signup-input"
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
@@ -154,18 +154,18 @@ function Signup() {
                         </InputAdornment>
                       ),
                     }}
-                  />
+          />
 
-                  <TextField
-                    label="Password"
+          <TextField
+            label="Password"
                     type={showPassword ? "text" : "password"}
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    fullWidth
-                    required
-                    margin="normal"
-                    className="signup-input"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            fullWidth
+            required
+            margin="normal"
+            className="signup-input"
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
@@ -184,18 +184,18 @@ function Signup() {
                         </InputAdornment>
                       ),
                     }}
-                  />
+          />
 
-                  <TextField
-                    label="Confirm Password"
+          <TextField
+            label="Confirm Password"
                     type={showConfirmPassword ? "text" : "password"}
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    fullWidth
-                    required
-                    margin="normal"
-                    className="signup-input"
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            fullWidth
+            required
+            margin="normal"
+            className="signup-input"
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
@@ -214,33 +214,33 @@ function Signup() {
                         </InputAdornment>
                       ),
                     }}
-                  />
+          />
 
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    fullWidth
+          <Button
+            type="submit"
+            variant="contained"
+            fullWidth
                     size="large"
                     className="signup-submit-btn"
-                  >
+          >
                     Create Account
-                  </Button>
+          </Button>
 
                   <div className="signup-form-footer">
                     <div className="signup-login-section">
                       <Typography variant="body2" className="signup-login-text">
                         Already have an account?
                       </Typography>
-                      <Button
-                        variant="outlined"
+          <Button
+            variant="outlined"
                         className="signup-login-btn"
-                        onClick={() => navigate("/login")}
-                      >
+            onClick={() => navigate("/login")}
+          >
                         Sign In
-                      </Button>
+          </Button>
                     </div>
                   </div>
-                </form>
+        </form>
               </CardContent>
             </Card>
           </div>

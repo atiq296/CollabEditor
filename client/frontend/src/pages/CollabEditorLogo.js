@@ -14,7 +14,7 @@ const CollabEditorLogo = ({ size = 120, className = "" }) => {
         }}
       />
     </div>
-  );
+);
 };
 
 export default CollabEditorLogo; 

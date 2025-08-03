@@ -154,7 +154,7 @@ html, body {
 
 .signup-form-content {
   padding: 3rem 2.5rem !important;
-}
+  }
 
 .signup-form-header {
   text-align: center;
@@ -370,7 +370,7 @@ html, body {
   }
   
   .signup-header-actions {
-    justify-content: center;
+  justify-content: center;
     width: 100%;
   }
   
@@ -395,8 +395,8 @@ html, body {
   
   .signup-benefits-title {
     font-size: 1.8rem !important;
-  }
-  
+}
+
   .signup-benefit-item {
     padding: 1.5rem !important;
     flex-direction: column;

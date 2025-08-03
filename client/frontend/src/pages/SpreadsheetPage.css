@@ -393,7 +393,7 @@
   .spreadsheet-main-box {
     max-width: 95vw;
     padding: 2rem 1.5rem 1.5rem 1.5rem;
-  }
+}
 }
 
 @media (max-width: 900px) {

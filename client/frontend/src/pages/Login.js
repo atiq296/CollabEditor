@@ -51,8 +51,8 @@ function Login() {
         // ✅ Save token and user name
         localStorage.setItem("token", data.token);
         localStorage.setItem("username", data.user.name);
-        // Always redirect to /select-role after login
-        navigate("/select-role");
+        // Redirect directly to dashboard (all users are owners by default)
+        navigate("/dashboard");
       } else {
         setError(data.message || "Login failed");
       }
@@ -76,7 +76,7 @@ function Login() {
                 Real-time Collaborative Editing Platform
               </Typography>
             </div>
-          </div>
+      </div>
           <div className="login-header-actions">
             <Button 
               variant="outlined" 
@@ -102,46 +102,46 @@ function Login() {
                   </Typography>
                   <Typography variant="body1" className="login-form-subtitle">
                     Sign in to continue to your workspace
-                  </Typography>
+          </Typography>
                 </div>
 
-                {error && (
+          {error && (
                   <Alert severity="error" className="login-error-alert">
-                    {error}
+              {error}
                   </Alert>
-                )}
+          )}
 
                 <form onSubmit={handleSubmit} className="login-form">
-                  <TextField
+          <TextField
                     label="Email Address"
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    fullWidth
-                    required
-                    margin="normal"
-                    className="login-input"
-                    InputProps={{
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            fullWidth
+            required
+            margin="normal"
+            className="login-input"
+            InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
                           <Email className="login-input-icon" />
                         </InputAdornment>
                       ),
-                    }}
-                  />
+            }}
+          />
 
-                  <TextField
-                    label="Password"
+          <TextField
+            label="Password"
                     type={showPassword ? "text" : "password"}
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    fullWidth
-                    required
-                    margin="normal"
-                    className="login-input"
-                    InputProps={{
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            fullWidth
+            required
+            margin="normal"
+            className="login-input"
+            InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
                           <Lock className="login-input-icon" />
@@ -158,27 +158,27 @@ function Login() {
                           </IconButton>
                         </InputAdornment>
                       ),
-                    }}
-                  />
+            }}
+          />
 
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    fullWidth
+          <Button
+            type="submit"
+            variant="contained"
+            fullWidth
                     size="large"
                     className="login-submit-btn"
-                  >
+          >
                     Sign In
-                  </Button>
+          </Button>
 
                   <div className="login-form-footer">
-                    <Button
-                      variant="text"
+          <Button
+            variant="text"
                       className="login-forgot-btn"
-                      onClick={() => navigate("/forgot-password")}
-                    >
-                      Forgot Password?
-                    </Button>
+            onClick={() => navigate("/forgot-password")}
+          >
+            Forgot Password?
+          </Button>
                     
                     <div className="login-signup-section">
                       <Typography variant="body2" className="login-signup-text">
@@ -193,7 +193,7 @@ function Login() {
                       </Button>
                     </div>
                   </div>
-                </form>
+        </form>
               </CardContent>
             </Card>
           </div>

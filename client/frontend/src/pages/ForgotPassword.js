@@ -92,7 +92,7 @@ function ForgotPassword() {
                   </Typography>
                   <Typography variant="body1" className="forgotpassword-form-subtitle">
                     Enter your email address and we'll send you a password reset link
-                  </Typography>
+      </Typography>
                 </div>
 
                 {status && (
@@ -108,14 +108,14 @@ function ForgotPassword() {
                 )}
 
                 <form onSubmit={handleSubmit} className="forgotpassword-form">
-                  <TextField
+        <TextField
                     label="Email Address"
-                    type="email"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    fullWidth
-                    required
-                    margin="normal"
+          type="email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          fullWidth
+          required
+          margin="normal"
                     className="forgotpassword-input"
                     InputProps={{
                       startAdornment: (
@@ -126,24 +126,24 @@ function ForgotPassword() {
                     }}
                   />
 
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    fullWidth
+        <Button
+          type="submit"
+          variant="contained"
+          fullWidth
                     size="large"
                     className="forgotpassword-submit-btn"
-                  >
-                    Send Reset Link
-                  </Button>
+        >
+          Send Reset Link
+        </Button>
 
                   <div className="forgotpassword-form-footer">
-                    <Button
-                      variant="text"
+      <Button
+        variant="text"
                       className="forgotpassword-login-btn"
-                      onClick={() => navigate("/login")}
-                    >
-                      Back to Login
-                    </Button>
+        onClick={() => navigate("/login")}
+      >
+        Back to Login
+      </Button>
                   </div>
                 </form>
               </CardContent>

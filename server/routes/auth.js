@@ -72,11 +72,12 @@ router.post('/verify-otp', async (req, res) => {
     if (!pendingUser) return res.status(404).json({ message: 'No pending signup for this email' });
     if (pendingUser.otp !== otp) return res.status(400).json({ message: 'Invalid OTP' });
     if (pendingUser.otpExpires < new Date()) return res.status(400).json({ message: 'OTP expired' });
-    // Create real user
+    // Create real user with Owner role by default
     const newUser = new User({
       name: pendingUser.name,
       email: pendingUser.email,
       password: pendingUser.password,
+      role: 'Owner', // Set default role to Owner
       verified: true
     });
     await newUser.save();
@@ -120,25 +121,6 @@ router.post('/resend-otp', async (req, res) => {
     res.json({ message: 'OTP resent successfully' });
   } catch (err) {
     res.status(500).json({ message: 'Failed to resend OTP', error: err.message });
-  }
-});
-
-// ====================== SET ROLE ======================
-router.post('/set-role', require('../middleware/auth'), async (req, res) => {
-  const { role } = req.body;
-  if (!role || !['Owner', 'Editor', 'Viewer'].includes(role)) {
-    return res.status(400).json({ message: 'Invalid role' });
-  }
-  try {
-    const user = await require('../models/User').findByIdAndUpdate(
-      req.userId,
-      { role },
-      { new: true }
-    ).select('-password');
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    res.json(user);
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to set role', error: err.message });
   }
 });
 
@@ -195,6 +177,48 @@ router.get('/me', require('../middleware/auth'), async (req, res) => {
     res.json(user);
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch user profile', error: err.message });
+  }
+});
+
+// ====================== GET FRIENDS/USERS ======================
+router.get('/friends', require('../middleware/auth'), async (req, res) => {
+  try {
+    const users = await User.find({ _id: { $ne: req.userId } })
+      .select('name email role createdAt')
+      .sort({ name: 1 });
+    console.log('Friends list requested:', {
+      requestingUserId: req.userId,
+      totalUsers: users.length,
+      users: users.map(u => ({ name: u.name, email: u.email, role: u.role }))
+    });
+    res.json(users);
+  } catch (err) {
+    console.error('Failed to fetch friends:', err);
+    res.status(500).json({ message: 'Failed to fetch users', error: err.message });
+  }
+});
+
+// ====================== DEBUG: GET ALL USERS ======================
+router.get('/debug/users', require('../middleware/auth'), async (req, res) => {
+  try {
+    const users = await User.find({})
+      .select('name email role verified createdAt')
+      .sort({ createdAt: -1 });
+    console.log('Debug: All users requested:', {
+      requestingUserId: req.userId,
+      totalUsers: users.length,
+      users: users.map(u => ({ 
+        name: u.name, 
+        email: u.email, 
+        role: u.role, 
+        verified: u.verified,
+        createdAt: u.createdAt
+      }))
+    });
+    res.json(users);
+  } catch (err) {
+    console.error('Failed to fetch all users:', err);
+    res.status(500).json({ message: 'Failed to fetch all users', error: err.message });
   }
 });
 

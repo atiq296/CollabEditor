@@ -1,40 +1,48 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
-  Typography,
   Button,
+  Typography,
+  Container,
   List,
   ListItem,
   ListItemText,
-  Divider,
   Stack,
+  Divider,
   Modal,
   Box,
   TextField,
+  Alert,
   Select,
   MenuItem,
-  InputLabel,
   FormControl,
-  Snackbar,
-  Alert,
-  Avatar,
+  InputLabel,
   Chip,
-  Card,
-  CardContent,
-  Grid,
+  Avatar,
+  ListItemAvatar,
+  ListItemButton,
   IconButton,
   Tooltip,
+  Grid,
+  Card,
+  CardContent,
 } from "@mui/material";
 import {
+  Description,
+  TableChart,
+  Add,
+  Share,
+  Settings,
+  Logout,
   Person,
   Email,
   AdminPanelSettings,
-  Description,
-  TableChart,
-  Logout,
-  Settings,
-  Share,
-  Add,
+  Edit,
+  Visibility,
+  ContentCopy,
+  Link as LinkIcon,
+  BugReport,
+  PersonSearch,
 } from "@mui/icons-material";
 import "./Dashboard.css";
 
@@ -47,6 +55,11 @@ function Dashboard() {
   const [shareEmail, setShareEmail] = useState("");
   const [shareRole, setShareRole] = useState("Viewer");
   const [shareStatus, setShareStatus] = useState(null);
+  const [shareMethod, setShareMethod] = useState("email"); // "email" or "link"
+  const [friends, setFriends] = useState([]);
+  const [showFriends, setShowFriends] = useState(false);
+  const [selectedFriend, setSelectedFriend] = useState(null);
+  const [friendSearchTerm, setFriendSearchTerm] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -140,39 +153,123 @@ function Dashboard() {
     }
   };
 
-  const handleOpenShare = (docId) => {
-    setShareDocId(docId);
-    setShareOpen(true);
-    setShareEmail("");
-    setShareRole("Viewer");
-    setShareStatus(null);
-  };
-  const handleCloseShare = () => {
-    setShareOpen(false);
-    setShareDocId(null);
-  };
   const handleShare = async () => {
-    if (!shareEmail) return;
+    if (!shareEmail && !selectedFriend) return;
+    
+    const emailToShare = selectedFriend ? selectedFriend.email : shareEmail;
     const token = localStorage.getItem("token");
     try {
-      // Always send a role (default to 'Viewer')
       const res = await fetch(`http://localhost:5000/api/document/${shareDocId}/share`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ email: shareEmail, role: 'Viewer' }),
+        body: JSON.stringify({ email: emailToShare, role: shareRole }),
       });
       if (res.ok) {
         setShareStatus("success");
         setTimeout(() => handleCloseShare(), 1200);
       } else {
+        const data = await res.json();
         setShareStatus("error");
+        alert(data.message || "Failed to share document");
       }
-    } catch {
+    } catch (err) {
       setShareStatus("error");
+      alert("Server error");
     }
+  };
+
+  const handleShareWithLink = () => {
+    // Check if the current document is a spreadsheet
+    const currentDoc = [...textDocs, ...spreadsheets].find(doc => doc._id === shareDocId);
+    const isSpreadsheet = currentDoc?.spreadsheet && Array.isArray(currentDoc.spreadsheet.data) && currentDoc.spreadsheet.data.length > 0;
+    
+    let urlPath;
+    if (isSpreadsheet) {
+      // For spreadsheets, use viewer route for viewers, editor route for editors/owners
+      urlPath = shareRole === 'Viewer' ? '/spreadsheet-viewer/' : '/spreadsheet/';
+    } else {
+      // For documents, use viewer route for viewers, editor route for editors/owners
+      urlPath = shareRole === 'Viewer' ? '/viewer/' : '/editor/';
+    }
+    
+    const url = `${window.location.origin}${urlPath}${shareDocId}`;
+    
+    navigator.clipboard.writeText(url);
+    setShareStatus('link-copied');
+    setTimeout(() => setShareStatus(null), 1200);
+  };
+
+  const fetchFriends = async () => {
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/friends", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setFriends(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch friends:", err);
+    }
+  };
+
+  const debugAllUsers = async () => {
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/debug/users", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        console.log("🔍 All registered users:", data);
+        alert(`Found ${data.length} registered users. Check browser console for details.`);
+      }
+    } catch (err) {
+      console.error("Failed to fetch all users:", err);
+    }
+  };
+
+  const checkUserExists = async (email) => {
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/debug/users", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const user = data.find(u => u.email.toLowerCase() === email.toLowerCase());
+        if (user) {
+          console.log("✅ User found:", user);
+          alert(`User found: ${user.name} (${user.email}) - Role: ${user.role} - Verified: ${user.verified}`);
+        } else {
+          console.log("❌ User not found:", email);
+          alert(`User not found: ${email}\n\nAvailable users:\n${data.map(u => `${u.name} (${u.email})`).join('\n')}`);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to check user:", err);
+    }
+  };
+
+  const handleOpenShare = (docId) => {
+    setShareDocId(docId);
+    setShareOpen(true);
+    setShareEmail("");
+    setShareRole("Viewer");
+    setShareStatus(null);
+    setShareMethod("email");
+    setSelectedFriend(null);
+    setShowFriends(false);
+    setFriendSearchTerm(""); // Reset search term
+    fetchFriends(); // Fetch friends when opening share modal
+  };
+  const handleCloseShare = () => {
+    setShareOpen(false);
+    setShareDocId(null);
   };
 
   // Split documents into textDocs and spreadsheets
@@ -283,20 +380,15 @@ function Dashboard() {
           </div>
 
           <div className="dashboard-header-actions">
-            <Tooltip title="Settings">
-              <IconButton className="dashboard-action-btn">
-                <Settings />
-              </IconButton>
-            </Tooltip>
-        <Button
-          variant="contained"
-          color="error"
-          className="dashboard-logout-btn"
-          onClick={handleLogout}
+            <Button
+              variant="outlined"
+              color="primary"
+              className="dashboard-logout-btn"
+              onClick={handleLogout}
               startIcon={<Logout />}
-        >
-          Log Out
-        </Button>
+            >
+              Logout
+            </Button>
           </div>
         </div>
       </header>
@@ -424,40 +516,212 @@ function Dashboard() {
       </main>
 
       <Modal open={shareOpen} onClose={handleCloseShare}>
-        <Box sx={{ p: 3, bgcolor: '#fff', borderRadius: 2, boxShadow: 3, maxWidth: 400, mx: 'auto', mt: 12 }}>
-          <Typography variant="h6" gutterBottom>Share Document</Typography>
+        <Box sx={{ 
+          p: 3, 
+          bgcolor: '#fff', 
+          borderRadius: 2, 
+          boxShadow: 3, 
+          maxWidth: 500, 
+          mx: 'auto', 
+          mt: 8,
+          maxHeight: '80vh',
+          overflow: 'auto'
+        }}>
+          <Typography variant="h5" gutterBottom sx={{ mb: 3, fontWeight: 'bold' }}>
+            Share Document
+          </Typography>
+
+          {/* Share Method Selection */}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="subtitle1" gutterBottom>
+              Choose sharing method:
+            </Typography>
+            <Stack direction="row" spacing={2}>
+              <Button
+                variant={shareMethod === "email" ? "contained" : "outlined"}
+                onClick={() => setShareMethod("email")}
+                startIcon={<Email />}
+              >
+                Share via Email
+              </Button>
+              <Button
+                variant={shareMethod === "link" ? "contained" : "outlined"}
+                onClick={() => setShareMethod("link")}
+                startIcon={<LinkIcon />}
+              >
+                Share via Link
+              </Button>
+            </Stack>
+          </Box>
+
+          {shareMethod === "email" && (
+            <>
+              {/* Role Selection */}
+              <FormControl fullWidth sx={{ mb: 3 }}>
+                <InputLabel>Assign Role</InputLabel>
+                <Select
+                  value={shareRole}
+                  onChange={(e) => setShareRole(e.target.value)}
+                  label="Assign Role"
+                >
+                  <MenuItem value="Viewer">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Visibility fontSize="small" />
+                      Viewer (Read-only)
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="Editor">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Edit fontSize="small" />
+                      Editor (Can edit)
+                    </Box>
+                  </MenuItem>
+                </Select>
+              </FormControl>
+
+              {/* Friends Section */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Share with registered users ({friends.length} users):
+                </Typography>
+                
+                {/* Search Box */}
+                <TextField
+                  fullWidth
+                  size="small"
+                  placeholder="Search users by name or email..."
+                  value={friendSearchTerm}
+                  onChange={(e) => setFriendSearchTerm(e.target.value)}
+                  sx={{ mb: 2 }}
+                  InputProps={{
+                    startAdornment: <Email sx={{ mr: 1, color: 'text.secondary' }} />,
+                  }}
+                />
+                
+                {friends.length > 0 ? (
+                  <List sx={{ maxHeight: 200, overflow: 'auto', border: 1, borderColor: 'grey.300', borderRadius: 1 }}>
+                    {friends
+                      .filter(friend => 
+                        friend.name?.toLowerCase().includes(friendSearchTerm.toLowerCase()) ||
+                        friend.email?.toLowerCase().includes(friendSearchTerm.toLowerCase())
+                      )
+                      .map((friend) => (
+                      <ListItem key={friend._id} disablePadding>
+                        <ListItemButton
+                          selected={selectedFriend?._id === friend._id}
+                          onClick={() => setSelectedFriend(friend)}
+                        >
+                          <ListItemAvatar>
+                            <Avatar sx={{ bgcolor: '#274690' }}>
+                              {friend.name?.charAt(0)?.toUpperCase() || 'U'}
+                            </Avatar>
+                          </ListItemAvatar>
+                          <ListItemText
+                            primary={friend.name || 'Unknown User'}
+                            secondary={
+                              <Box>
+                                <Typography variant="body2" color="text.secondary">
+                                  {friend.email}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  Joined: {new Date(friend.createdAt).toLocaleDateString()}
+                                </Typography>
+                              </Box>
+                            }
+                          />
+                          {selectedFriend?._id === friend._id && (
+                            <Chip label={shareRole} size="small" color="primary" />
+                          )}
+                        </ListItemButton>
+                      </ListItem>
+                    ))}
+                  </List>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    No other users found. You can share by entering an email address below.
+                  </Typography>
+                )}
+              </Box>
+
+              {/* Email Input */}
+              <Typography variant="subtitle1" gutterBottom>
+                Or share with email address:
+              </Typography>
           <TextField
             fullWidth
             label="User Email"
             value={shareEmail}
             onChange={e => setShareEmail(e.target.value)}
+                sx={{ mb: 3 }}
+                placeholder="Enter email address"
+              />
+
+              <Button 
+                variant="contained" 
+                onClick={handleShare} 
+                fullWidth
+                disabled={!shareEmail && !selectedFriend}
             sx={{ mb: 2 }}
-          />
-          <Button variant="contained" onClick={handleShare} fullWidth>Share</Button>
-          {shareStatus === 'success' && <Alert severity="success" sx={{ mt: 2 }}>Shared successfully!</Alert>}
-          {shareStatus === 'error' && <Alert severity="error" sx={{ mt: 2 }}>Failed to share.</Alert>}
-          <Typography variant="subtitle2" sx={{ mt: 2 }}>Or share with a link:</Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-            <TextField
-              value={`${window.location.origin}${shareDocId ? (spreadsheets.some(doc => doc._id === shareDocId) ? '/spreadsheet/' : '/editor/') + shareDocId : ''}`}
-              InputProps={{ readOnly: true }}
-              fullWidth
-              size="small"
-              sx={{ mr: 1 }}
-            />
-            <Button
-              variant="outlined"
-              onClick={() => {
-                const url = `${window.location.origin}${shareDocId ? (spreadsheets.some(doc => doc._id === shareDocId) ? '/spreadsheet/' : '/editor/') + shareDocId : ''}`;
-                navigator.clipboard.writeText(url);
-                setShareStatus('link-copied');
-                setTimeout(() => setShareStatus(null), 1200);
-              }}
-            >
-              Copy Link
-            </Button>
-          </Box>
-          {shareStatus === 'link-copied' && <Alert severity="success" sx={{ mt: 1 }}>Link copied!</Alert>}
+              >
+                Share Document
+              </Button>
+            </>
+          )}
+
+          {shareMethod === "link" && (
+            <>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Copy this link to share the document:
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <TextField
+                  value={`${window.location.origin}${shareDocId ? (() => {
+                    // Check if the current document is a spreadsheet
+                    const currentDoc = [...textDocs, ...spreadsheets].find(doc => doc._id === shareDocId);
+                    const isSpreadsheet = currentDoc?.spreadsheet && Array.isArray(currentDoc.spreadsheet.data) && currentDoc.spreadsheet.data.length > 0;
+                    
+                    let urlPath;
+                    if (isSpreadsheet) {
+                      // For spreadsheets, use viewer route for viewers, editor route for editors/owners
+                      return shareRole === 'Viewer' ? '/spreadsheet-viewer/' : '/spreadsheet/';
+                    } else {
+                      // For documents, use viewer route for viewers, editor route for editors/owners
+                      return shareRole === 'Viewer' ? '/viewer/' : '/editor/';
+                    }
+                  })() + shareDocId : ''}`}
+                  InputProps={{ readOnly: true }}
+                  fullWidth
+                  size="small"
+                  sx={{ mr: 1 }}
+                />
+                <Tooltip title="Copy link">
+                  <IconButton onClick={handleShareWithLink}>
+                    <ContentCopy />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+              <Typography variant="caption" color="text.secondary">
+                Anyone with this link can view the document. For editing permissions, use email sharing.
+              </Typography>
+            </>
+          )}
+
+          {/* Status Messages */}
+          {shareStatus === 'success' && (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              Document shared successfully!
+            </Alert>
+          )}
+          {shareStatus === 'error' && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              Failed to share document.
+            </Alert>
+          )}
+          {shareStatus === 'link-copied' && (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              Link copied to clipboard!
+            </Alert>
+          )}
         </Box>
       </Modal>
     </div>

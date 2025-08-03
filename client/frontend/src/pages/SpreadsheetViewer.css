@@ -1,0 +1,303 @@
+/* Spreadsheet Viewer Page Styles */
+.spreadsheetviewer-root {
+  min-height: 100vh;
+  width: 100vw;
+  background: linear-gradient(135deg, #0a2342 0%, #274690 100%);
+  color: #1a2342;
+  font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+  overflow-x: auto;
+}
+
+/* Custom Scrollbar Styles */
+.spreadsheetviewer-root::-webkit-scrollbar {
+  width: 12px;
+}
+.spreadsheetviewer-root::-webkit-scrollbar-thumb {
+  background: #274690;
+  border-radius: 8px;
+}
+.spreadsheetviewer-root::-webkit-scrollbar-track {
+  background: #e3eafc;
+  border-radius: 8px;
+}
+.spreadsheetviewer-root {
+  scrollbar-width: thin;
+  scrollbar-color: #274690 #e3eafc;
+}
+
+/* Header Styles */
+.spreadsheetviewer-header {
+  width: 100%;
+  max-width: 1400px;
+  padding: 2rem 2.5rem 1.5rem 2.5rem;
+  box-sizing: border-box;
+  margin: 0 auto;
+}
+
+.spreadsheetviewer-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2rem;
+}
+
+.spreadsheetviewer-user-section {
+  display: flex;
+  align-items: center;
+}
+
+.spreadsheetviewer-user-profile {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 1rem 1.5rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.spreadsheetviewer-user-avatar {
+  flex-shrink: 0;
+}
+
+.spreadsheetviewer-user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.spreadsheetviewer-user-name {
+  color: #274690 !important;
+  font-weight: 700 !important;
+  margin: 0 !important;
+}
+
+.spreadsheetviewer-user-email {
+  color: #666 !important;
+  margin: 0 !important;
+  font-size: 0.9rem !important;
+}
+
+.spreadsheetviewer-user-role {
+  font-weight: 600 !important;
+}
+
+/* Stats Section */
+.spreadsheetviewer-stats-section {
+  flex: 1;
+  max-width: 600px;
+}
+
+.spreadsheetviewer-stats-grid {
+  display: flex;
+  gap: 1rem;
+}
+
+.spreadsheetviewer-stat-card {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  backdrop-filter: blur(10px) !important;
+  transition: all 0.3s !important;
+  flex: 1;
+}
+
+.spreadsheetviewer-stat-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.spreadsheetviewer-stat-number {
+  color: #274690 !important;
+  font-weight: 900 !important;
+  margin-bottom: 0.25rem !important;
+}
+
+.spreadsheetviewer-stat-label {
+  color: #666 !important;
+  font-weight: 600 !important;
+  font-size: 0.85rem !important;
+}
+
+/* Header Actions */
+.spreadsheetviewer-header-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.spreadsheetviewer-edit-btn {
+  background: linear-gradient(90deg, #00FFFF 0%, #8000FF 100%) !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+  border-radius: 12px !important;
+  padding: 0.75rem 1.5rem !important;
+  box-shadow: 0 4px 16px rgba(0, 255, 255, 0.3) !important;
+  transition: all 0.3s !important;
+}
+
+.spreadsheetviewer-edit-btn:hover {
+  background: linear-gradient(90deg, #8000FF 0%, #00FFFF 100%) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(0, 255, 255, 0.4) !important;
+}
+
+.spreadsheetviewer-back-btn {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  transition: all 0.2s !important;
+  padding: 0.75rem 1.5rem !important;
+}
+
+.spreadsheetviewer-back-btn:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: #fff !important;
+  transform: translateY(-2px);
+}
+
+/* Main Content */
+.spreadsheetviewer-main-box {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem 2.5rem 3rem 2.5rem;
+}
+
+.spreadsheetviewer-title-section {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.spreadsheetviewer-title {
+  color: #fff !important;
+  font-weight: 900 !important;
+  margin-bottom: 1rem !important;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.2) !important;
+}
+
+.spreadsheetviewer-content {
+  display: flex;
+  justify-content: center;
+}
+
+.spreadsheetviewer-spreadsheet-container {
+  width: 100%;
+  max-width: 1200px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+  padding: 1rem;
+}
+
+.spreadsheetviewer-handsontable {
+  background: #fff !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+
+/* Handsontable Read-Only Styling */
+.spreadsheetviewer-handsontable .htCore {
+  background: #fff !important;
+}
+
+.spreadsheetviewer-handsontable .htCore td {
+  background: #f8f9fa !important;
+  color: #333 !important;
+  border: 1px solid #e9ecef !important;
+  cursor: default !important;
+}
+
+.spreadsheetviewer-handsontable .htCore th {
+  background: #274690 !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  border: 1px solid #1a2342 !important;
+}
+
+.spreadsheetviewer-handsontable .htCore .htRowHeader {
+  background: #274690 !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  border: 1px solid #1a2342 !important;
+}
+
+.spreadsheetviewer-handsontable .htCore .htColHeader {
+  background: #274690 !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  border: 1px solid #1a2342 !important;
+}
+
+/* Disable editing interactions */
+.spreadsheetviewer-handsontable .htCore td:hover {
+  background: #f8f9fa !important;
+  cursor: default !important;
+}
+
+.spreadsheetviewer-handsontable .htCore td:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Responsive Design */
+@media (max-width: 1400px) {
+  .spreadsheetviewer-header {
+    max-width: 95vw;
+    padding: 1.5rem 1rem 1rem 1rem;
+  }
+  
+  .spreadsheetviewer-main-box {
+    max-width: 95vw;
+    padding: 2rem 1.5rem 2rem 1.5rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .spreadsheetviewer-header-content {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  
+  .spreadsheetviewer-user-profile {
+    flex-direction: column;
+    text-align: center;
+    padding: 1rem;
+  }
+  
+  .spreadsheetviewer-stats-grid {
+    flex-wrap: wrap;
+  }
+  
+  .spreadsheetviewer-stat-card {
+    min-width: 120px;
+  }
+  
+  .spreadsheetviewer-header-actions {
+    justify-content: center;
+    width: 100%;
+  }
+}
+
+@media (max-width: 700px) {
+  .spreadsheetviewer-header, .spreadsheetviewer-main-box {
+    max-width: 98vw;
+    padding: 1rem 0.5rem;
+  }
+  
+  .spreadsheetviewer-title {
+    font-size: 1.8rem !important;
+  }
+  
+  .spreadsheetviewer-spreadsheet-container {
+    padding: 0.5rem;
+  }
+} 

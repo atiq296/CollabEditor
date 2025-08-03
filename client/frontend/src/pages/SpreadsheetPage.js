@@ -141,7 +141,7 @@ function SpreadsheetPage() {
 
   const handleRoleChange = async (userId, newRole) => {
     const token = getToken();
-    const res = await fetch(`${process.env.REACT_APP_API_URL}/api/document/${documentId}/collaborator`, {
+    const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/document/${documentId}/collaborator`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -162,14 +162,14 @@ function SpreadsheetPage() {
     const userId = getUserId();
 
     // Fetch user profile
-    fetch("http://localhost:5000/api/auth/me", {
+    fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
       .then(data => setUser(data))
       .catch(() => setUser(null));
 
-    fetch(`http://localhost:5000/api/document/${documentId}`, {
+    fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/document/${documentId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
@@ -180,18 +180,57 @@ function SpreadsheetPage() {
               (c) => c.user._id === userId && c.role === "Editor"
             )
         );
+        
+        console.log('🔐 Spreadsheet access check:', {
+          documentId: documentId,
+          userId: userId,
+          isOwner: doc.createdBy === userId,
+          isEditor: doc.collaborators?.some(c => c.user._id === userId && c.role === "Editor"),
+          isViewer: doc.collaborators?.some(c => c.user._id === userId && c.role === "Viewer"),
+          collaborators: doc.collaborators?.map(c => ({
+            userId: c.user._id,
+            userName: c.user.name,
+            userEmail: c.user.email,
+            role: c.role
+          })) || [],
+          finalIsEditor: doc.createdBy === userId || doc.collaborators?.some(c => c.user._id === userId && c.role === "Editor")
+        });
+        
         setTitle(doc.title || 'Untitled Spreadsheet');
         setComments(doc.comments || []);
         setCollaborators(doc.collaborators || []);
         setOwnerId(doc.createdBy || (doc.createdBy?._id));
       });
 
-    fetch(`http://localhost:5000/api/document/${documentId}/spreadsheet`, {
+    fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/document/${documentId}/spreadsheet`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((res) => res.json())
+      .then((res) => {
+        console.log('Spreadsheet fetch response:', {
+          status: res.status,
+          statusText: res.statusText,
+          ok: res.ok
+        });
+        
+        if (!res.ok) {
+          return res.json().then(errorData => {
+            console.error('Spreadsheet fetch error response:', errorData);
+            throw new Error(`HTTP ${res.status}: ${errorData.message || res.statusText}`);
+          });
+        }
+        return res.json();
+      })
       .then((fetchedData) => {
+        console.log('Spreadsheet data loaded:', {
+          isArray: Array.isArray(fetchedData),
+          length: fetchedData?.length || 0,
+          hasData: fetchedData && fetchedData.length > 0,
+          firstRow: fetchedData?.[0],
+          sampleData: fetchedData?.slice(0, 3)
+        });
+        
         if (!Array.isArray(fetchedData) || fetchedData.length === 0) {
+          console.log('Creating empty spreadsheet with default size');
           const rows = 30, // Increased initial size
             cols = 15;     // Increased initial size
           const empty = Array.from({ length: rows }, () =>
@@ -199,16 +238,27 @@ function SpreadsheetPage() {
           );
           setData(empty);
         } else {
+          console.log('Setting spreadsheet data from server');
           setData(fetchedData);
         }
         setLoading(false);
+      })
+      .catch((error) => {
+        console.error('Error loading spreadsheet data:', error);
+        setLoading(false);
+        // Create empty spreadsheet on error
+        const rows = 30, cols = 15;
+        const empty = Array.from({ length: rows }, () =>
+          Array.from({ length: cols }, () => "")
+        );
+        setData(empty);
       });
   }, [documentId]);
 
   useEffect(() => {
     if (!isEditor) return;
     const interval = setInterval(() => {
-      fetch(`http://localhost:5000/api/document/${documentId}/spreadsheet`, {
+      fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/document/${documentId}/spreadsheet`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -259,7 +309,7 @@ function SpreadsheetPage() {
     if (newComment.trim()) {
       const token = getToken();
       try {
-        const res = await fetch(`http://localhost:5000/api/document/${documentId}/comment`, {
+        const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/document/${documentId}/comment`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -284,7 +334,7 @@ function SpreadsheetPage() {
     console.log('Saving spreadsheet:', data, title);
     try {
       const token = getToken();
-      const res = await fetch(`http://localhost:5000/api/document/${documentId}/spreadsheet`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/document/${documentId}/spreadsheet`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

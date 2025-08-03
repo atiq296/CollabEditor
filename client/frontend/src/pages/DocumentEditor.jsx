@@ -34,6 +34,8 @@ import {
   Psychology,
   Visibility,
   VisibilityOff,
+  Lock,
+  Edit,
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
@@ -56,6 +58,8 @@ function DocumentEditor() {
   const [collaborators, setCollaborators] = useState([]);
   const [ownerId, setOwnerId] = useState(null);
   const [user, setUser] = useState(null);
+  const [userRole, setUserRole] = useState(null); // User's global role (Owner, Editor, Viewer)
+  const [documentRole, setDocumentRole] = useState(null); // User's role for this specific document
   const navigate = useNavigate();
 
   const getToken = () => localStorage.getItem('token') || '';
@@ -81,7 +85,24 @@ function DocumentEditor() {
     }
   };
 
+  // Permission checks based on roles
+  const isOwner = () => userRole === 'Owner' || documentRole === 'Owner';
+  const isEditor = () => userRole === 'Editor' || documentRole === 'Editor';
+  const isViewer = () => userRole === 'Viewer' || documentRole === 'Viewer';
+  const canEdit = () => isOwner() || isEditor();
+  const canShare = () => isOwner();
+  const canDelete = () => isOwner();
+  const canImport = () => isOwner() || isEditor();
+  const canExport = () => isOwner() || isEditor();
+  const canComment = () => isOwner() || isEditor();
+  const canUseAI = () => isOwner() || isEditor();
+
   const handleRoleChange = async (userId, newRole) => {
+    if (!canShare()) {
+      alert("Only document owners can change collaborator roles.");
+      return;
+    }
+    
     const token = getToken();
     const res = await fetch(`${process.env.REACT_APP_API_URL}/api/document/${documentId}/collaborator`, {
       method: "PATCH",
@@ -103,14 +124,17 @@ function DocumentEditor() {
     const token = getToken();
     
     // Fetch user profile
-    fetch("http://localhost:5000/api/auth/me", {
+    fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
-      .then(data => setUser(data))
+      .then(data => {
+        setUser(data);
+        setUserRole(data.role || 'Owner'); // Set user's global role
+      })
       .catch(() => setUser(null));
 
-    const socket = io('http://localhost:5000');
+    const socket = io(process.env.REACT_APP_API_URL || 'http://localhost:5000');
     socketRef.current = socket;
     const username = getUsername();
     socket.emit('join-document', { documentId, username });
@@ -122,19 +146,87 @@ function DocumentEditor() {
   }, [documentId]);
 
   useEffect(() => {
-    fetch(`http://localhost:5000/api/document/${documentId}`, {
+    fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/document/${documentId}`, {
       headers: { Authorization: `Bearer ${getToken()}` },
     })
-      .then((res) => res.json())
+      .then((res) => {
+        console.log('Document fetch response:', {
+          status: res.status,
+          statusText: res.statusText,
+          ok: res.ok
+        });
+        
+        if (!res.ok) {
+          return res.json().then(errorData => {
+            console.error('Document fetch error response:', errorData);
+            throw new Error(`HTTP ${res.status}: ${errorData.message || res.statusText}`);
+          });
+        }
+        return res.json();
+      })
       .then((data) => {
-        console.log('Loaded:', data.content, data.title);
+        console.log('Document loaded successfully:', {
+          id: data._id,
+          title: data.title,
+          content: data.content,
+          contentLength: data.content?.length || 0,
+          createdBy: data.createdBy,
+          collaborators: data.collaborators?.length || 0,
+          hasContent: !!data.content
+        });
+        
         setContent(data.content || '');
         setTitle(data.title || 'Untitled Document');
         setComments(data.comments || []);
         setCollaborators(data.collaborators || []);
         setOwnerId(data.createdBy || (data.createdBy?._id));
+        
+        // Set document role based on user's relationship to this document
+        const currentUserId = getCurrentUserId();
+        if (data.createdBy === currentUserId || data.createdBy?._id === currentUserId) {
+          setDocumentRole('Owner');
+        } else {
+          // Check if user is a collaborator
+          const collaborator = data.collaborators?.find(c => 
+            c.user._id === currentUserId || c.user === currentUserId
+          );
+          if (collaborator) {
+            setDocumentRole(collaborator.role);
+          } else {
+            setDocumentRole('Viewer'); // Default to viewer if not specified
+          }
+        }
+      })
+      .catch((error) => {
+        console.error('Error loading document:', error);
+        console.error('Document ID:', documentId);
+        console.error('Token:', getToken() ? 'Present' : 'Missing');
+        
+        let errorMessage = 'Failed to load document. ';
+        if (error.message.includes('403')) {
+          errorMessage += 'Access denied. You may not have permission to view this document.';
+        } else if (error.message.includes('404')) {
+          errorMessage += 'Document not found.';
+        } else if (error.message.includes('401')) {
+          errorMessage += 'Authentication failed. Please log in again.';
+        } else {
+          errorMessage += 'Please check your permissions or try again.';
+        }
+        
+        alert(errorMessage);
       });
   }, [documentId]);
+
+  // Ensure ReactQuill displays content when it's loaded
+  useEffect(() => {
+    if (quillRef.current && content) {
+      const quill = quillRef.current.getEditor();
+      if (quill && quill.getContents().ops.length === 0) {
+        quill.setText('');
+        quill.clipboard.dangerouslyPasteHTML(content);
+      }
+    }
+  }, [content, quillRef.current]);
 
   // Real-time: Listen for remote changes and update editor
   useEffect(() => {
@@ -161,14 +253,23 @@ function DocumentEditor() {
   }, [socketRef, quillRef, documentId]);
 
   const handleChange = (value) => {
+    if (canEdit()) {
     setContent(value);
+    }
   };
 
   const handleTitleChange = (e) => {
+    if (canEdit()) {
     setTitle(e.target.value);
+    }
   };
 
   const handleSave = async () => {
+    if (!canEdit()) {
+      alert("Only owners and editors can save changes to this document.");
+      return;
+    }
+    
     console.log('Saving:', content, title);
     try {
       const token = getToken();
@@ -176,7 +277,7 @@ function DocumentEditor() {
         title.trim() ||
         (typeof content === 'string' ? content.replace(/<[^>]+>/g, "").slice(0, 30) : "") ||
         "Untitled";
-      const res = await fetch(`http://localhost:5000/api/document/${documentId}`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/document/${documentId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -252,10 +353,15 @@ function DocumentEditor() {
   };
 
   const handleAddComment = async () => {
+    if (!canComment()) {
+      alert("Only owners and editors can add comments to this document.");
+      return;
+    }
+    
     if (newComment.trim()) {
       const token = getToken();
       try {
-        const res = await fetch(`http://localhost:5000/api/document/${documentId}/comment`, {
+        const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/document/${documentId}/comment`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -281,6 +387,10 @@ function DocumentEditor() {
   };
 
   const handleDeleteComment = (idx) => {
+    if (!canEdit()) {
+      alert("Only owners and editors can delete comments from this document.");
+      return;
+    }
     setComments(comments.filter((_, i) => i !== idx));
   };
 
@@ -361,13 +471,28 @@ function DocumentEditor() {
                 <Typography variant="body2" className="doceditor-user-email">
                   {user?.email || 'user@example.com'}
                 </Typography>
-                <Chip 
-                  icon={<AdminPanelSettings />}
-                  label={user?.role || 'User'}
-                  size="small"
-                  className="doceditor-user-role"
-                  color={user?.role === 'admin' ? 'error' : 'primary'}
-                />
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  <Chip 
+                    icon={documentRole === 'Owner' ? <AdminPanelSettings /> : documentRole === 'Editor' ? <Edit /> : <Visibility />}
+                    label={`${documentRole || 'Viewer'} (Document)`}
+                    size="small"
+                    className="doceditor-user-role"
+                    color={
+                      documentRole === 'Owner' ? 'success' : 
+                      documentRole === 'Editor' ? 'primary' : 
+                      'default'
+                    }
+                  />
+                  {userRole && userRole !== documentRole && (
+                    <Chip 
+                      icon={<Person />}
+                      label={`${userRole} (Global)`}
+                      size="small"
+                      variant="outlined"
+                      color="secondary"
+                    />
+                  )}
+                </Box>
               </div>
             </div>
           </div>
@@ -451,19 +576,31 @@ function DocumentEditor() {
             value={title}
             onChange={handleTitleChange}
             placeholder="Enter document title..."
+            disabled={!canEdit()}
           />
+          {!canEdit() && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Lock fontSize="small" />
+              Read-only mode - You can view but not edit this document
+            </Typography>
+          )}
         </div>
 
         <div className="doceditor-actions">
-          <Button
-            variant="outlined"
-            color="primary"
-            className="doceditor-action-button"
-            onClick={handleImportClick}
-            startIcon={<FileUpload />}
-          >
-            Import
-          </Button>
+          <Tooltip title={!canImport() ? "Only owners and editors can import files" : "Import document"}>
+            <span>
+              <Button
+                variant="outlined"
+                color="primary"
+                className="doceditor-action-button"
+                onClick={handleImportClick}
+                startIcon={<FileUpload />}
+                disabled={!canImport()}
+              >
+                Import
+              </Button>
+            </span>
+          </Tooltip>
             <input
               type="file"
               accept=".docx,.html"
@@ -471,28 +608,38 @@ function DocumentEditor() {
               style={{ display: 'none' }}
               onChange={handleImportFile}
             />
-          <Button
-            variant="outlined"
-            color="secondary"
-            className="doceditor-action-button"
-            onClick={handleExportClick}
-            startIcon={<FileDownload />}
-          >
-            Export
-          </Button>
+          <Tooltip title={!canExport() ? "Only owners and editors can export files" : "Export document"}>
+            <span>
+              <Button
+                variant="outlined"
+                color="secondary"
+                className="doceditor-action-button"
+                onClick={handleExportClick}
+                startIcon={<FileDownload />}
+                disabled={!canExport()}
+              >
+                Export
+              </Button>
+            </span>
+          </Tooltip>
             <Menu anchorEl={exportAnchorEl} open={Boolean(exportAnchorEl)} onClose={handleExportClose}>
               <MenuItem onClick={handleExportPDF}>Export as PDF</MenuItem>
               <MenuItem onClick={handleExportWord}>Export as Word</MenuItem>
             </Menu>
-          <Button
-            variant="contained"
-            color="primary"
-            className="doceditor-action-button"
-            onClick={handleSave}
-            startIcon={<Save />}
-          >
-            Save Document
-          </Button>
+          <Tooltip title={!canEdit() ? "Only owners and editors can save changes" : "Save document"}>
+            <span>
+              <Button
+                variant="contained"
+                color="primary"
+                className="doceditor-action-button"
+                onClick={handleSave}
+                startIcon={<Save />}
+                disabled={!canEdit()}
+              >
+                Save Document
+              </Button>
+            </span>
+          </Tooltip>
           <Button
             variant="outlined"
             color="info"
@@ -509,42 +656,91 @@ function DocumentEditor() {
             🤖 AI Writing Assistant
           </Typography>
           <div className="doceditor-ai-actions">
-            <Button
-              variant="outlined"
-              color="warning"
-              className="doceditor-ai-button"
-              onClick={handleImproveGrammar}
-              disabled={aiLoading}
-              startIcon={<AutoFixHigh />}
-            >
-              Improve Grammar
-            </Button>
-            <Button
-              variant="outlined"
-              color="info"
-              className="doceditor-ai-button"
-              onClick={handleEnhanceTone}
-              disabled={aiLoading}
-              startIcon={<Psychology />}
-            >
-              Enhance Tone
-            </Button>
+            <Tooltip title={!canUseAI() ? "Only owners and editors can use AI features" : "Improve grammar using AI"}>
+              <span>
+                <Button
+                  variant="outlined"
+                  color="warning"
+                  className="doceditor-ai-button"
+                  onClick={handleImproveGrammar}
+                  disabled={aiLoading || !canUseAI()}
+                  startIcon={<AutoFixHigh />}
+                >
+                  Improve Grammar
+                </Button>
+              </span>
+            </Tooltip>
+            <Tooltip title={!canUseAI() ? "Only owners and editors can use AI features" : "Enhance tone using AI"}>
+              <span>
+                <Button
+                  variant="outlined"
+                  color="info"
+                  className="doceditor-ai-button"
+                  onClick={handleEnhanceTone}
+                  disabled={aiLoading || !canUseAI()}
+                  startIcon={<Psychology />}
+                >
+                  Enhance Tone
+                </Button>
+              </span>
+            </Tooltip>
             {aiLoading && <CircularProgress size={24} sx={{ ml: 2, color: '#274690' }} />}
           </div>
         </div>
 
-        <div className="doceditor-content-row">
-          <div className="doceditor-editor-container">
+        <div className="documenteditor-content">
+          <div className="documenteditor-editor-container">
+            {!canEdit() && (
+              <Box sx={{ 
+                p: 2, 
+                mb: 2, 
+                bgcolor: 'warning.light', 
+                borderRadius: 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1
+              }}>
+                <Lock fontSize="small" />
+                <Typography variant="body2">
+                  You are in read-only mode. Only owners and editors can make changes to this document.
+                </Typography>
+              </Box>
+            )}
           <ReactQuill
               ref={quillRef}
             theme="snow"
             value={content}
             onChange={handleChange}
-            placeholder="Start typing here..."
-            modules={DocumentEditor.modules}
-            formats={DocumentEditor.formats}
-              className="doceditor-quill"
+              placeholder="Start writing your document..."
+              modules={{
+                toolbar: [
+                  [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                  ['bold', 'italic', 'underline', 'strike'],
+                  [{ 'color': [] }, { 'background': [] }],
+                  [{ 'align': [] }],
+                  [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                  ['blockquote', 'code-block'],
+                  ['link', 'image'],
+                  ['clean']
+                ],
+                clipboard: {
+                  matchVisual: false
+                }
+              }}
+              formats={[
+                'header', 'bold', 'italic', 'underline', 'strike',
+                'color', 'background', 'align', 'list', 'bullet',
+                'blockquote', 'code-block', 'link', 'image'
+              ]}
+              className="documenteditor-quill"
+              style={{
+                height: 'auto',
+                minHeight: '60vh',
+                maxHeight: '80vh',
+                overflowY: 'auto'
+              }}
           />
+        </div>
         </div>
           
         {showSidebar && (
@@ -566,47 +762,77 @@ function DocumentEditor() {
                       {c.author && typeof c.author === 'object' ? c.author.name : c.author}
                     </span>
                     {c.date && <span className="doceditor-comment-date">{c.date}</span>}
-                        <IconButton 
-                          size="small" 
-                          onClick={() => handleDeleteComment(i)}
-                          className="doceditor-comment-delete"
-                        >
-                          ×
-                        </IconButton>
+                    {canEdit() && (
+                      <IconButton 
+                        size="small" 
+                        onClick={() => handleDeleteComment(i)}
+                        className="doceditor-comment-delete"
+                      >
+                        ×
+                      </IconButton>
+                    )}
                   </div>
                   <div className="doceditor-comment-text">{c.text}</div>
                 </div>
               ))}
             </div>
+            {canComment() ? (
             <div className="doceditor-add-comment">
               <textarea
                 value={newComment}
                 onChange={e => setNewComment(e.target.value)}
                 placeholder="Add a comment..."
                 rows={2}
-                    className="doceditor-comment-textarea"
-                  />
-                  <Button 
-                    onClick={handleAddComment} 
-                    variant="contained" 
-                    className="doceditor-comment-btn"
-                    startIcon={<Share />}
-                  >
-                    Add Comment
-                  </Button>
-                </div>
+                  className="doceditor-comment-textarea"
+                />
+                <Button 
+                  onClick={handleAddComment} 
+                  variant="contained" 
+                  className="doceditor-comment-btn"
+                  startIcon={<Share />}
+                >
+                  Add Comment
+                </Button>
+              </div>
+            ) : (
+              <Box sx={{ 
+                p: 2, 
+                bgcolor: 'grey.100', 
+                borderRadius: 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1
+              }}>
+                <Lock fontSize="small" />
+                <Typography variant="body2" color="text.secondary">
+                  Only owners and editors can add comments
+                </Typography>
+              </Box>
+            )}
             </div>
 
               <div className="doceditor-sidebar-section">
                 <Typography variant="h6" className="doceditor-section-title">
-                  👥 Collaborators ({collaborators.length})
+                  👥 Live Collaborators ({collaborators.filter(collab => {
+                    const collaboratorId = collab.user._id || collab.user;
+                    const ownerIdValue = ownerId?._id || ownerId;
+                    return collaboratorId !== ownerIdValue;
+                  }).length})
                 </Typography>
-                {collaborators.length === 0 && (
+                {collaborators.filter(collab => {
+                  const collaboratorId = collab.user._id || collab.user;
+                  const ownerIdValue = ownerId?._id || ownerId;
+                  return collaboratorId !== ownerIdValue;
+                }).length === 0 && (
                   <Typography variant="body2" className="doceditor-empty-text">
-                    No collaborators yet.
+                    No live collaborators yet.
                   </Typography>
                 )}
-              {collaborators.map((collab) => (
+              {collaborators.filter(collab => {
+                const collaboratorId = collab.user._id || collab.user;
+                const ownerIdValue = ownerId?._id || ownerId;
+                return collaboratorId !== ownerIdValue;
+              }).map((collab) => (
                   <div key={collab.user._id || collab.user} className="doceditor-collaborator-item">
                     <div className="doceditor-collaborator-info">
                       <span className="doceditor-collaborator-name">
@@ -619,12 +845,12 @@ function DocumentEditor() {
                         className="doceditor-collaborator-role"
                       />
                     </div>
-                  {getCurrentUserId() === (ownerId?._id || ownerId) && (
+                  {canShare() && (
                     <Select
                       value={collab.role}
                       onChange={e => handleRoleChange(collab.user._id || collab.user, e.target.value)}
                       size="small"
-                        className="doceditor-role-select"
+                      className="doceditor-role-select"
                     >
                       <MenuItem value="Editor">Editor</MenuItem>
                       <MenuItem value="Viewer">Viewer</MenuItem>

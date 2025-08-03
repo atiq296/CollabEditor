@@ -154,7 +154,7 @@ html, body {
 
 .login-form-content {
   padding: 3rem 2.5rem !important;
-}
+  }
 
 .login-form-header {
   text-align: center;
@@ -389,8 +389,8 @@ html, body {
   
   .login-form-title {
     font-size: 1.8rem !important;
-  }
-  
+}
+
   .login-features-title {
     font-size: 1.8rem !important;
   }

@@ -2,10 +2,54 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const User = require('../models/User');
 const PendingUser = require('../models/PendingUser');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+
+// ====================== FILE UPLOAD CONFIGURATION ======================
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+const avatarsDir = path.join(uploadsDir, 'avatars');
+
+// Create upload directories if they don't exist
+if (!fs.existsSync(uploadsDir)) {
+  console.log('Creating uploads directory:', uploadsDir);
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+if (!fs.existsSync(avatarsDir)) {
+  console.log('Creating avatars directory:', avatarsDir);
+  fs.mkdirSync(avatarsDir, { recursive: true });
+}
+
+console.log('Upload directories configured:', { uploadsDir, avatarsDir });
+
+// Configure multer for avatar uploads
+const avatarStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, avatarsDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'avatar-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const avatarUpload = multer({
+  storage: avatarStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'), false);
+    }
+  }
+});
 
 // ====================== SIGNUP ======================
 router.post('/signup', async (req, res) => {
@@ -268,6 +312,120 @@ router.post('/reset-password', async (req, res) => {
     res.json({ message: 'Password reset successful' });
   } catch (err) {
     res.status(500).json({ message: 'Failed to reset password', error: err.message });
+  }
+});
+
+// ====================== GET USER PROFILE ======================
+router.get('/profile', require('../middleware/auth'), async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('-password -otp -otpExpires -resetPasswordToken -resetPasswordExpires');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json(user);
+  } catch (err) {
+    console.error('Failed to fetch user profile:', err);
+    res.status(500).json({ message: 'Failed to fetch profile', error: err.message });
+  }
+});
+
+// ====================== UPDATE USER PROFILE ======================
+router.put('/profile', require('../middleware/auth'), (req, res, next) => {
+  avatarUpload.single('avatar')(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      console.error('Multer error:', err);
+      return res.status(400).json({ message: 'File upload error: ' + err.message });
+    } else if (err) {
+      console.error('File upload error:', err);
+      return res.status(400).json({ message: 'File upload error: ' + err.message });
+    }
+    next();
+  });
+}, async (req, res) => {
+  try {
+    console.log('Profile update request received:', {
+      userId: req.userId,
+      body: req.body,
+      file: req.file ? req.file.filename : 'No file'
+    });
+
+    const {
+      name,
+      email,
+      phone,
+      location,
+      company,
+      education,
+      bio,
+      website,
+      linkedin,
+      github,
+      twitter
+    } = req.body;
+
+    const user = await User.findById(req.userId);
+    if (!user) {
+      console.log('User not found for ID:', req.userId);
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    console.log('Found user:', { id: user._id, email: user.email });
+
+    // Check if email is being changed and if it's already taken
+    if (email && email !== user.email) {
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        console.log('Email already in use:', email);
+        return res.status(400).json({ message: 'Email already in use' });
+      }
+    }
+
+    // Update profile fields
+    const updateFields = {
+      name: name || user.name,
+      email: email || user.email,
+      phone: phone !== undefined ? phone : user.phone,
+      location: location !== undefined ? location : user.location,
+      company: company !== undefined ? company : user.company,
+      education: education !== undefined ? education : user.education,
+      bio: bio !== undefined ? bio : user.bio,
+      website: website !== undefined ? website : user.website,
+      linkedin: linkedin !== undefined ? linkedin : user.linkedin,
+      github: github !== undefined ? github : user.github,
+      twitter: twitter !== undefined ? twitter : user.twitter
+    };
+
+    // Handle avatar upload if present
+    if (req.file) {
+      updateFields.avatar = req.file.filename;
+    }
+
+    console.log('Updating user with fields:', updateFields);
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.userId,
+      updateFields,
+      { new: true, runValidators: true }
+    ).select('-password -otp -otpExpires -resetPasswordToken -resetPasswordExpires');
+
+    if (!updatedUser) {
+      console.log('Failed to update user - user not found after update');
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    console.log('Profile updated successfully for user:', updatedUser._id);
+
+    res.json({
+      message: 'Profile updated successfully',
+      user: updatedUser
+    });
+  } catch (err) {
+    console.error('Failed to update user profile:', err);
+    console.error('Error details:', {
+      message: err.message,
+      stack: err.stack
+    });
+    res.status(500).json({ message: 'Failed to update profile', error: err.message });
   }
 });
 

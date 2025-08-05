@@ -150,6 +150,21 @@
   transform: scale(1.05) !important;
 }
 
+.dashboard-profile-btn {
+  background: linear-gradient(90deg, #4CAF50 0%, #2E7D32 100%) !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px 0 rgba(76, 175, 80, 0.10);
+  transition: background 0.3s, transform 0.2s, box-shadow 0.2s;
+  padding: 0.5rem 1.5rem !important;
+}
+.dashboard-profile-btn:hover {
+  background: linear-gradient(90deg, #2E7D32 0%, #4CAF50 100%) !important;
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 4px 16px 0 rgba(76, 175, 80, 0.18);
+}
+
 .dashboard-logout-btn {
   background: linear-gradient(90deg, #e53935 0%, #b71c1c 100%) !important;
   color: #fff !important;

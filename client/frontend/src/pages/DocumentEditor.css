@@ -340,6 +340,31 @@
   51%, 100% { opacity: 0.3; }
 }
 
+/* Inline comment indicator styles */
+.inline-comment-indicator {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background-color: #ff6b6b;
+  border-radius: 50%;
+  z-index: 1002;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 8px;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transition: all 0.2s ease;
+}
+
+.inline-comment-indicator:hover {
+  transform: scale(1.2);
+  background-color: #ff5252;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
 /* Sidebar Styles */
 .doceditor-sidebar {
   flex: 1;

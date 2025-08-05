@@ -29,6 +29,7 @@ function EditorPage() {
   const [socket, setSocket] = useState(null);
   const [quillValue, setQuillValue] = useState("");
   const [activeUsers, setActiveUsers] = useState([]);
+  const [remoteCursors, setRemoteCursors] = useState({}); // Store remote cursors by user ID
   const [comments, setComments] = useState([]);
   const [selectedRange, setSelectedRange] = useState(null);
   const [showCommentModal, setShowCommentModal] = useState(false);
@@ -43,15 +44,37 @@ function EditorPage() {
   const getToken = () => localStorage.getItem("token") || "";
 
   const getUsername = () => {
-    const token = getToken();
-    if (!token) return "Unknown";
-    try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      return payload.name || "User";
-    } catch {
-      return "User";
-    }
-  };
+  const token = getToken();
+  if (!token) return "Unknown";
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.name || "User";
+  } catch {
+    return "User";
+  }
+};
+
+const getCurrentUserId = () => {
+  const token = getToken();
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.id;
+  } catch {
+    return null;
+  }
+};
+
+// Generate unique color for each user
+const getUserColor = (userId) => {
+  const colors = [
+    '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', 
+    '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F',
+    '#BB8FCE', '#85C1E9', '#F8C471', '#82E0AA'
+  ];
+  const index = userId ? userId.toString().split('').reduce((a, b) => a + b.charCodeAt(0), 0) % colors.length : 0;
+  return colors[index];
+};
 
 const fetchAIResult = async (inputText, instruction) => {
   setAiLoading(true);
@@ -186,6 +209,136 @@ const handleExportToWord = async () => {
     quill.on("text-change", handler);
     return () => quill.off("text-change", handler);
   }, [socket]);
+
+  // Cursor tracking: Emit local cursor position
+  useEffect(() => {
+    if (!socket || !quillRef.current) return;
+    const quill = quillRef.current.getEditor();
+    
+    let lastCursorData = null;
+    const handleSelectionChange = (range, oldRange, source) => {
+      if (source === "user" && range) {
+        const cursorData = {
+          documentId,
+          userId: getCurrentUserId(),
+          username: getUsername(),
+          range: {
+            index: range.index,
+            length: range.length
+          }
+        };
+        
+        // Only emit if cursor position actually changed
+        if (!lastCursorData || 
+            lastCursorData.range.index !== cursorData.range.index ||
+            lastCursorData.range.length !== cursorData.range.length) {
+          socket.emit("cursor-change", cursorData);
+          lastCursorData = cursorData;
+        }
+      }
+    };
+    
+    quill.on("selection-change", handleSelectionChange);
+    return () => quill.off("selection-change", handleSelectionChange);
+  }, [socket, documentId]);
+
+  // Cursor tracking: Listen for remote cursor updates
+  useEffect(() => {
+    if (!socket) return;
+    
+    const handleRemoteCursor = (cursorData) => {
+      if (cursorData.userId !== getCurrentUserId()) {
+        setRemoteCursors(prev => ({
+          ...prev,
+          [cursorData.userId]: {
+            username: cursorData.username,
+            range: cursorData.range,
+            timestamp: Date.now()
+          }
+        }));
+      }
+    };
+    
+    socket.on("remote-cursor", handleRemoteCursor);
+    return () => socket.off("remote-cursor", handleRemoteCursor);
+  }, [socket]);
+
+  // Clean up old remote cursors (older than 10 seconds)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setRemoteCursors(prev => {
+        const updated = {};
+        Object.keys(prev).forEach(userId => {
+          if (now - prev[userId].timestamp < 10000) { // 10 seconds
+            updated[userId] = prev[userId];
+          }
+        });
+        return updated;
+      });
+    }, 5000); // Check every 5 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Render remote cursors in the editor
+  useEffect(() => {
+    const quill = quillRef.current?.getEditor();
+    if (!quill) return;
+
+    // Clear existing cursors and labels
+    const existingCursors = document.querySelectorAll('.remote-cursor, .remote-cursor-label');
+    existingCursors.forEach(cursor => cursor.remove());
+
+    // Add new cursors
+    Object.entries(remoteCursors).forEach(([userId, cursorData]) => {
+      try {
+        const range = cursorData.range;
+        const bounds = quill.getBounds(range.index, range.length);
+        
+        if (bounds && bounds.left >= 0 && bounds.top >= 0) {
+          const cursorElement = document.createElement('div');
+          cursorElement.className = 'remote-cursor';
+          cursorElement.style.cssText = `
+            position: absolute;
+            left: ${bounds.left}px;
+            top: ${bounds.top}px;
+            width: 2px;
+            height: ${bounds.height}px;
+            background-color: ${getUserColor(userId)};
+            z-index: 1000;
+            pointer-events: none;
+          `;
+          
+          // Add username label
+          const label = document.createElement('div');
+          label.className = 'remote-cursor-label';
+          label.textContent = cursorData.username;
+          label.style.cssText = `
+            position: absolute;
+            left: ${bounds.left}px;
+            top: ${bounds.top - 20}px;
+            background-color: ${getUserColor(userId)};
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 1001;
+            pointer-events: none;
+          `;
+          
+          const editorContainer = quill.container;
+          if (editorContainer) {
+            editorContainer.appendChild(cursorElement);
+            editorContainer.appendChild(label);
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to render remote cursor for user', userId, ':', error);
+      }
+    });
+  }, [remoteCursors]);
 
   useEffect(() => {
     const interval = setInterval(() => {

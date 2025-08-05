@@ -92,6 +92,18 @@ io.on('connection', (socket) => {
     socket.to(documentId).emit('receive-changes', delta);
   });
 
+  // Cursor tracking: Handle cursor position updates
+  socket.on('cursor-change', ({ documentId, userId, username, range }) => {
+    // Broadcast cursor position to other users in the same document
+    socket.to(documentId).emit('remote-cursor', {
+      userId,
+      username,
+      range,
+      timestamp: Date.now()
+    });
+    console.log(`👆 Cursor update from ${username} in ${documentId}`);
+  });
+
   socket.on('disconnect', () => {
     const name = activeUsers[socket.id];
     delete activeUsers[socket.id];

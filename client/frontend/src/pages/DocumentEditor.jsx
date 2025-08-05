@@ -60,6 +60,9 @@ function DocumentEditor() {
   const [user, setUser] = useState(null);
   const [userRole, setUserRole] = useState(null); // User's global role (Owner, Editor, Viewer)
   const [documentRole, setDocumentRole] = useState(null); // User's role for this specific document
+  const [versions, setVersions] = useState([]);
+  const [versionLoading, setVersionLoading] = useState(false);
+
   const navigate = useNavigate();
 
   const getToken = () => localStorage.getItem('token') || '';
@@ -238,6 +241,31 @@ function DocumentEditor() {
     return () => socket.off('receive-changes', handler);
   }, [socketRef, quillRef]);
 
+  // --- Move fetchVersions here ---
+  const fetchVersions = async () => {
+    setVersionLoading(true);
+    try {
+      const token = getToken();
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/version/${documentId}/versions`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setVersions(data.reverse()); // latest version first
+      } else {
+        console.error(data.message || 'Failed to fetch versions');
+      }
+    } catch (err) {
+      console.error('Error fetching versions:', err);
+    } finally {
+      setVersionLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchVersions();
+  }, [documentId]);
+
   // Real-time: Emit local changes to server
   useEffect(() => {
     const socket = socketRef.current;
@@ -248,6 +276,10 @@ function DocumentEditor() {
         socket.emit('send-changes', { documentId, delta });
       }
     };
+
+  
+
+
     quill.on('text-change', handler);
     return () => quill.off('text-change', handler);
   }, [socketRef, quillRef, documentId]);
@@ -263,13 +295,44 @@ function DocumentEditor() {
     setTitle(e.target.value);
     }
   };
+  const handleRestoreVersion = async (ver) => {
+  if (!canEdit()) {
+    alert("Only owners and editors can restore versions.");
+    return;
+  }
 
+  setContent(ver.content);
+  setTitle(ver.title || 'Restored Version');
+
+  try {
+    const token = getToken();
+    await fetch(`${process.env.REACT_APP_API_URL}/api/document/${documentId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        content: ver.content,
+        title: ver.title || 'Restored Version',
+      }),
+    });
+
+    fetchVersions();
+    setSaveStatus('success');
+    alert("Version restored successfully.");
+  } catch (error) {
+    console.error("Restore error:", error);
+    setSaveStatus('error');
+  }
+};
   const handleSave = async () => {
     if (!canEdit()) {
       alert("Only owners and editors can save changes to this document.");
       return;
     }
-    
+
+
     console.log('Saving:', content, title);
     try {
       const token = getToken();
@@ -287,8 +350,24 @@ function DocumentEditor() {
       });
       if (res.ok) {
         setSaveStatus('success');
-        // Notify dashboard to refresh
         window.dispatchEvent(new Event('refreshDocs'));
+        // Save version after saving the document
+        const versionRes = await fetch(`${process.env.REACT_APP_API_URL}/api/version/${documentId}/save-version`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${getToken()}`
+          },
+          body: JSON.stringify({ content, title })
+        });
+        if (versionRes.ok) {
+          // Refetch versions to update sidebar
+          fetchVersions();
+        } else {
+          const errorData = await versionRes.json();
+          console.error('Version save error:', errorData);
+          setSaveStatus('error');
+        }
       } else {
         setSaveStatus('error');
       }
@@ -401,7 +480,7 @@ function DocumentEditor() {
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
-          "Authorization": "Bearer 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",
+          "Authorization": "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",
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
@@ -721,6 +800,46 @@ function DocumentEditor() {
           
         {showSidebar && (
           <aside className="doceditor-sidebar">
+            <div className="doceditor-sidebar-section">
+  <Typography variant="h6" className="doceditor-section-title">
+    📜 Version History ({versions.length})
+  </Typography>
+  {versionLoading ? (
+    <CircularProgress size={24} />
+  ) : versions.length === 0 ? (
+    <Typography variant="body2">No versions yet.</Typography>
+  ) : (
+    versions.map((ver, idx) => (
+      <div key={ver._id} className="doceditor-version-item">
+        <Typography variant="body2">
+  {ver.savedAt ? new Date(ver.savedAt).toLocaleString() : 'Unknown'}
+  {" — "}
+  {ver.savedBy && ver.savedBy.name ? ver.savedBy.name : 'Unknown User'}
+</Typography>
+        <Button 
+  variant="text" 
+  size="small"
+  onClick={() => setContent(ver.content)}
+>
+  Load
+</Button>
+{canEdit() && (
+  <Button 
+    variant="outlined" 
+    size="small" 
+    color="success" 
+    sx={{ ml: 1 }}
+    onClick={() => handleRestoreVersion(ver)}
+  >
+    Restore
+  </Button>
+)}
+
+      </div>
+    ))
+  )}
+</div>
+
               <div className="doceditor-sidebar-section">
                 <Typography variant="h6" className="doceditor-section-title">
                   💬 Comments ({comments.length})

@@ -11,7 +11,17 @@ const DocumentSchema = new mongoose.Schema({
       role: { type: String, enum: ['Editor', 'Viewer'], default: 'Viewer' }
     }
   ],
-
+  versions: [
+  {
+    content: String,
+    title: String,
+    savedAt: Date,
+    savedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }
+  }
+],
   comments: [
     {
       text: String,

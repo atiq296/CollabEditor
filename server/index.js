@@ -31,6 +31,9 @@ app.use('/api/document', documentRoutes);
 const chatRoutes = require('./routes/chat');
 app.use('/api/chat', chatRoutes);
 
+const versionRoutes = require('./routes/Version');
+app.use('/api/Version', versionRoutes);
+
 // ✅ Socket.IO Setup — this MUST come AFTER `io` is defined
 const activeUsers = {}; // userId -> name
 

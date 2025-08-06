@@ -59,7 +59,7 @@ const avatarUpload = multer({
 
 // ✅ Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Increase payload size limit for large documents/images
 app.use(express.urlencoded({ extended: true }));
 
 // ✅ Static file serving

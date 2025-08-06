@@ -1,0 +1,145 @@
+.role-hierarchy-container {
+  padding: 2rem;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 100vh;
+}
+
+.role-card {
+  height: 100%;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.role-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.role-card.students {
+  border-left: 4px solid #4caf50;
+  background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+}
+
+.role-card.supervisors {
+  border-left: 4px solid #2196f3;
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+}
+
+.role-card.ugpc {
+  border-left: 4px solid #ff9800;
+  background: linear-gradient(135deg, #fff3e0 0%, #ffcc80 100%);
+}
+
+.role-card.ugec {
+  border-left: 4px solid #9c27b0;
+  background: linear-gradient(135deg, #f3e5f5 0%, #ce93d8 100%);
+}
+
+.role-card.hod {
+  border-left: 4px solid #f44336;
+  background: linear-gradient(135deg, #ffebee 0%, #ef9a9a 100%);
+}
+
+.role-card.admin {
+  border-left: 4px solid #607d8b;
+  background: linear-gradient(135deg, #eceff1 0%, #b0bec5 100%);
+}
+
+.user-chip {
+  margin: 4px !important;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.user-chip:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.role-card .MuiTypography-h6 {
+  margin-bottom: 1rem;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.role-card .MuiTypography-subtitle1 {
+  color: #34495e;
+  margin-bottom: 0.5rem;
+}
+
+/* Department sections */
+.department-section {
+  margin: 1rem 0;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .role-hierarchy-container {
+    padding: 1rem;
+  }
+  
+  .role-card {
+    margin-bottom: 1rem;
+  }
+}
+
+/* Animation for cards */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.role-card {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.role-card:nth-child(1) { animation-delay: 0.1s; }
+.role-card:nth-child(2) { animation-delay: 0.2s; }
+.role-card:nth-child(3) { animation-delay: 0.3s; }
+.role-card:nth-child(4) { animation-delay: 0.4s; }
+.role-card:nth-child(5) { animation-delay: 0.5s; }
+.role-card:nth-child(6) { animation-delay: 0.6s; }
+
+/* Dialog styles */
+.MuiDialog-paper {
+  border-radius: 12px !important;
+}
+
+.MuiDialogTitle-root {
+  background: linear-gradient(135deg, #274690 0%, #0a2342 100%);
+  color: white !important;
+}
+
+.MuiDialogActions-root {
+  padding: 1rem 1.5rem 1.5rem 1.5rem;
+}
+
+/* Form controls */
+.MuiFormControl-root {
+  margin-bottom: 1rem;
+}
+
+.MuiSelect-select {
+  padding: 12px 14px !important;
+}
+
+/* Chip variations for different roles */
+.user-chip[data-role="Head"] {
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%) !important;
+  color: white !important;
+}
+
+.user-chip[data-role="Member"] {
+  background: linear-gradient(135deg, #757575 0%, #616161 100%) !important;
+  color: white !important;
+} 

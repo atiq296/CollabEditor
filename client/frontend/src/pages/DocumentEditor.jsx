@@ -19,11 +19,6 @@ import {
   IconButton,
   Tooltip,
   Box,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
 } from '@mui/material';
 import {
   Person,
@@ -41,8 +36,6 @@ import {
   VisibilityOff,
   Lock,
   Edit,
-  Comment,
-  AddComment,
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
@@ -54,14 +47,8 @@ function DocumentEditor() {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [showSidebar, setShowSidebar] = useState(true);
-  const [selectedText, setSelectedText] = useState('');
-  const [selectedRange, setSelectedRange] = useState(null);
-  const [showCommentDialog, setShowCommentDialog] = useState(false);
-  const [inlineCommentText, setInlineCommentText] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [activeUsers, setActiveUsers] = useState([]);
-  const [isDragOver, setIsDragOver] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState(null);
   const [remoteCursors, setRemoteCursors] = useState({}); // Store remote cursors by user ID
   const socketRef = useRef(null);
   const quillRef = useRef(null);
@@ -132,14 +119,14 @@ function DocumentEditor() {
     return () => clearInterval(interval);
   }, []);
 
-  // Render remote cursors and inline comments in the editor
+  // Render remote cursors in the editor
   useEffect(() => {
     const quill = quillRef.current?.getEditor();
     if (!quill) return;
 
-    // Clear existing cursors, labels, and comment indicators
-    const existingElements = document.querySelectorAll('.remote-cursor, .remote-cursor-label, .inline-comment-indicator');
-    existingElements.forEach(element => element.remove());
+    // Clear existing cursors and labels
+    const existingCursors = document.querySelectorAll('.remote-cursor, .remote-cursor-label');
+    existingCursors.forEach(cursor => cursor.remove());
 
     // Add new cursors
     Object.entries(remoteCursors).forEach(([userId, cursorData]) => {
@@ -189,67 +176,7 @@ function DocumentEditor() {
         console.warn('Failed to render remote cursor for user', userId, ':', error);
       }
     });
-
-    // Add inline comment indicators
-    comments.forEach((comment, index) => {
-      if (comment.position) {
-        try {
-          const bounds = quill.getBounds(comment.position.index, comment.position.length);
-          
-          if (bounds && bounds.left >= 0 && bounds.top >= 0) {
-            const indicator = document.createElement('div');
-            indicator.className = 'inline-comment-indicator';
-            indicator.setAttribute('data-comment-index', index);
-            indicator.style.cssText = `
-              position: absolute;
-              left: ${bounds.left + bounds.width}px;
-              top: ${bounds.top}px;
-              width: 12px;
-              height: 12px;
-              background-color: #ff6b6b;
-              border-radius: 50%;
-              z-index: 1002;
-              cursor: pointer;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              color: white;
-              font-size: 8px;
-              font-weight: bold;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            `;
-            indicator.textContent = '💬';
-            
-            // Add hover tooltip
-            indicator.title = `Comment: ${comment.text}`;
-            
-            // Add click handler to show comment details
-            indicator.addEventListener('click', () => {
-              // Highlight the commented text
-              quill.setSelection(comment.position.index, comment.position.length);
-              
-              // Show comment in sidebar (you could also show a popup)
-              const commentElement = document.querySelector(`[data-comment-id="${index}"]`);
-              if (commentElement) {
-                commentElement.scrollIntoView({ behavior: 'smooth' });
-                commentElement.style.backgroundColor = '#fff3cd';
-                setTimeout(() => {
-                  commentElement.style.backgroundColor = '';
-                }, 2000);
-              }
-            });
-            
-            const editorContainer = quill.container;
-            if (editorContainer) {
-              editorContainer.appendChild(indicator);
-            }
-          }
-        } catch (error) {
-          console.warn('Failed to render inline comment indicator for comment', index, ':', error);
-        }
-      }
-    });
-  }, [remoteCursors, comments]);
+  }, [remoteCursors]);
 
   // Generate unique color for each user
   const getUserColor = (userId) => {
@@ -632,21 +559,49 @@ function DocumentEditor() {
   const handleImportFile = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.name.endsWith('.docx')) {
-      const mammoth = await import('mammoth');
-      const arrayBuffer = await file.arrayBuffer();
-      const result = await mammoth.convertToHtml({ arrayBuffer });
-      setContent(result.value);
-    } else if (file.name.endsWith('.html')) {
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        setContent(evt.target.result);
-      };
-      reader.readAsText(file);
-    } else {
-      alert('Only .docx and .html files are supported for import.');
+    let importedContent = '';
+
+    try {
+      if (file.name.endsWith('.docx')) {
+        const mammoth = await import('mammoth');
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.convertToHtml({ arrayBuffer });
+        importedContent = result.value;
+        setContent(importedContent);
+      } else if (file.name.endsWith('.html')) {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          importedContent = evt.target.result;
+          setContent(importedContent);
+        };
+        reader.readAsText(file);
+      } else {
+        alert('Only .docx and .html files are supported for import.');
+        return;
+      }
+
+      // Emit imported content to other users
+      const socket = socketRef.current;
+      if (socket) {
+        socket.emit('import-content', { documentId, content: importedContent });
+      }
+    } catch (error) {
+      console.error('Error importing file:', error);
+      alert('Failed to import the file. Please ensure it is a valid .docx or .html file.');
     }
   };
+
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket) return;
+
+    const handleReceiveImportedContent = (content) => {
+      setContent(content);
+    };
+
+    socket.on('receive-imported-content', handleReceiveImportedContent);
+    return () => socket.off('receive-imported-content', handleReceiveImportedContent);
+  }, [socketRef]);
 
   const handleAddComment = async () => {
     if (!canComment()) {
@@ -682,152 +637,6 @@ function DocumentEditor() {
     }
   };
 
-  // Handle text selection for inline comments
-  const handleTextSelection = () => {
-    const quill = quillRef.current?.getEditor();
-    if (!quill) return;
-
-    const selection = quill.getSelection();
-    if (selection && selection.length > 0) {
-      const text = quill.getText(selection.index, selection.length);
-      setSelectedText(text);
-      setSelectedRange({
-        index: selection.index,
-        length: selection.length
-      });
-      setShowCommentDialog(true);
-    }
-  };
-
-  // Add inline comment
-  const handleAddInlineComment = async () => {
-    if (!canComment()) {
-      alert("Only owners and editors can add comments to this document.");
-      return;
-    }
-    
-    if (inlineCommentText.trim() && selectedRange) {
-      const token = getToken();
-      try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/document/${documentId}/comment`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            text: inlineCommentText,
-            position: selectedRange
-          }),
-        });
-        if (res.ok) {
-          const savedComment = await res.json();
-          setComments([...comments, savedComment]);
-          setInlineCommentText('');
-          setSelectedRange(null);
-          setSelectedText('');
-          setShowCommentDialog(false);
-          setCommentStatus('success');
-        } else {
-          setCommentStatus('error');
-        }
-      } catch (err) {
-        setCommentStatus('error');
-      }
-      setTimeout(() => setCommentStatus(null), 2000);
-    }
-  };
-
-  // Cancel inline comment
-  const handleCancelInlineComment = () => {
-    setInlineCommentText('');
-    setSelectedRange(null);
-    setSelectedText('');
-    setShowCommentDialog(false);
-  };
-
-  // Drag and drop handlers for image upload
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (canEdit()) {
-      setIsDragOver(true);
-    }
-  };
-
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(false);
-  };
-
-  const handleDrop = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(false);
-
-    if (!canEdit()) {
-      setUploadStatus('error');
-      setTimeout(() => setUploadStatus(null), 3000);
-      return;
-    }
-
-    const files = Array.from(e.dataTransfer.files);
-    const imageFiles = files.filter(file => file.type.startsWith('image/'));
-
-    if (imageFiles.length === 0) {
-      setUploadStatus('error');
-      setTimeout(() => setUploadStatus(null), 3000);
-      return;
-    }
-
-    try {
-      setUploadStatus('uploading');
-      
-      for (const file of imageFiles) {
-        // Validate file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-          console.warn('File too large:', file.name);
-          continue;
-        }
-
-        // Convert file to base64 for embedding
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-          const base64Data = event.target.result;
-          
-          // Get current cursor position
-          const quill = quillRef.current?.getEditor();
-          const range = quill?.getSelection() || { index: quill?.getLength() || 0 };
-          
-                  // Insert image at cursor position
-        if (quill) {
-          quill.insertEmbed(range.index, 'image', base64Data);
-          quill.setSelection(range.index + 1);
-          
-          // Auto-save the document after image upload
-          setTimeout(() => {
-            handleSave();
-          }, 500);
-        }
-        };
-        reader.readAsDataURL(file);
-      }
-
-      setUploadStatus('success');
-      setTimeout(() => setUploadStatus(null), 3000);
-      
-      // Auto-save the document after all images are uploaded
-      setTimeout(() => {
-        handleSave();
-      }, 1000);
-    } catch (error) {
-      console.error('Error uploading images:', error);
-      setUploadStatus('error');
-      setTimeout(() => setUploadStatus(null), 3000);
-    }
-  };
-
   const handleDeleteComment = (idx) => {
     if (!canEdit()) {
       alert("Only owners and editors can delete comments from this document.");
@@ -838,47 +647,154 @@ function DocumentEditor() {
 
   // --- AI Grammar/Tone Handlers ---
   const fetchAIResult = async (inputText, instruction) => {
-    setAiLoading(true);
-    try {
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": "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",
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: "mistralai/mistral-7b-instruct",
-          messages: [
-            { role: "system", content: instruction },
-            { role: "user", content: inputText }
-          ]
-        })
-      });
-      const json = await response.json();
-      setAiLoading(false);
-      return json.choices?.[0]?.message?.content || inputText;
-    } catch (err) {
-      setAiLoading(false);
-      return inputText;
+  setAiLoading(true);
+  try {
+    console.log("Sending request to AI API with input:", inputText);
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.REACT_APP_AI_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "mistralai/mistral-7b-instruct",
+        messages: [
+          { role: "system", content: instruction },
+          { role: "user", content: inputText }
+        ]
+      })
+    });
+
+    console.log("API response status:", response.status);
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.status} ${response.statusText}`);
     }
-  };
+
+    const json = await response.json();
+    console.log("API response data:", json);
+    setAiLoading(false);
+    return json.choices?.[0]?.message?.content || inputText;
+  } catch (err) {
+    console.error("Error fetching AI result:", err);
+    setAiLoading(false);
+    return inputText;
+  }
+};
 
   const handleImproveGrammar = async () => {
     const plainText = document.querySelector('.ql-editor')?.innerText || '';
+    console.log("Input text for grammar improvement:", plainText);
     const improved = await fetchAIResult(
       plainText,
       "Fix grammar, punctuation, and fluency. Return only the corrected version without explanation:"
     );
+    console.log("Improved text:", improved);
     if (improved) setContent(improved);
   };
 
   const handleEnhanceTone = async () => {
     const plainText = document.querySelector('.ql-editor')?.innerText || '';
+    console.log("Input text for tone enhancement:", plainText);
     const improved = await fetchAIResult(
       plainText,
       "Rewrite this text to make it more professional and engaging in tone:"
     );
+    console.log("Enhanced text:", improved);
     if (improved) setContent(improved);
+  };
+  const handleAutoSummarize = async () => {
+    const plainText = document.querySelector('.ql-editor')?.innerText || '';
+    console.log("Input text for summarization:", plainText);
+    setAiLoading(true);
+    try {
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.REACT_APP_AI_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "mistralai/mistral-7b-instruct",
+          messages: [
+            { role: "system", content: "Create a concise summary of the following text, highlighting key points and main ideas:" },
+            { role: "user", content: plainText }
+          ]
+        })
+      });
+
+      console.log("API response status:", response.status);
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+
+      const json = await response.json();
+      console.log("Summary result:", json);
+      if (json.choices?.[0]?.message?.content) {
+        const summary = json.choices[0].message.content;
+        alert("Document Summary:\n\n" + summary);
+      } else {
+        throw new Error("No summary returned from the AI API.");
+      }
+    } catch (err) {
+      console.error("Summary generation failed:", err);
+      alert("Failed to generate summary. Please try again.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  // Refined OpenRouter prompts for better AI responses
+  const handleSmartComplete = async (type = 'sentence') => {
+    const quill = quillRef.current?.getEditor();
+    if (!quill) return;
+
+    const selection = quill.getSelection();
+    if (!selection) return;
+
+    const text = quill.getText(0, selection.index);
+    console.log("Input text for smart completion:", text);
+    setAiLoading(true);
+
+    try {
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.REACT_APP_AI_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "mistralai/mistral-7b-instruct",
+          messages: [
+            { 
+              role: "system", 
+              content: type === 'sentence' 
+                ? "Complete the following sentence in a natural and coherent way, ensuring proper grammar and context:" 
+                : "Generate the next logical bullet point based on the context provided, ensuring relevance and clarity:" 
+            },
+            { role: "user", content: text }
+          ]
+        })
+      });
+
+      console.log("API response status:", response.status);
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+
+      const json = await response.json();
+      console.log("Smart completion result:", json);
+      if (json.choices?.[0]?.message?.content) {
+        const completion = json.choices[0].message.content;
+        quill.insertText(selection.index, completion);
+      } else {
+        throw new Error("No completion returned from the AI API.");
+      }
+    } catch (err) {
+      console.error("Smart completion failed:", err);
+      alert("Failed to generate completion. Please try again.");
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   // Calculate statistics
@@ -1112,6 +1028,7 @@ function DocumentEditor() {
                 </Button>
               </span>
             </Tooltip>
+            
             <Tooltip title={!canUseAI() ? "Only owners and editors can use AI features" : "Enhance tone using AI"}>
               <span>
                 <Button
@@ -1126,23 +1043,58 @@ function DocumentEditor() {
                 </Button>
               </span>
             </Tooltip>
+
+            <Tooltip title={!canUseAI() ? "Only owners and editors can use AI features" : "Generate document summary"}>
+              <span>
+                <Button
+                  variant="outlined"
+                  color="success"
+                  className="doceditor-ai-button"
+                  onClick={handleAutoSummarize}
+                  disabled={aiLoading || !canUseAI()}
+                  startIcon={<Description />}
+                >
+                  Summarize
+                </Button>
+              </span>
+            </Tooltip>
+
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Tooltip title={!canUseAI() ? "Only owners and editors can use AI features" : "Complete current sentence"}>
+                <span>
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    className="doceditor-ai-button"
+                    onClick={() => handleSmartComplete('sentence')}
+                    disabled={aiLoading || !canUseAI()}
+                  >
+                    Complete Sentence
+                  </Button>
+                </span>
+              </Tooltip>
+              
+              <Tooltip title={!canUseAI() ? "Only owners and editors can use AI features" : "Generate next bullet point"}>
+                <span>
+                  <Button
+                    variant="outlined"
+                    color="secondary"
+                    className="doceditor-ai-button"
+                    onClick={() => handleSmartComplete('bullet')}
+                    disabled={aiLoading || !canUseAI()}
+                  >
+                    Next Bullet
+                  </Button>
+                </span>
+              </Tooltip>
+            </Box>
+
             {aiLoading && <CircularProgress size={24} sx={{ ml: 2, color: '#274690' }} />}
           </div>
         </div>
 
         <div className="doceditor-content-row">
-          <div 
-            className="doceditor-editor-container"
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            style={{
-              position: 'relative',
-              border: isDragOver ? '2px dashed #ff6b6b' : 'none',
-              backgroundColor: isDragOver ? 'rgba(255, 107, 107, 0.1)' : 'transparent',
-              transition: 'all 0.2s ease'
-            }}
-          >
+          <div className="doceditor-editor-container">
             {!canEdit() && (
               <Box sx={{ 
                 p: 2, 
@@ -1159,57 +1111,6 @@ function DocumentEditor() {
                 </Typography>
               </Box>
             )}
-            
-            {/* Inline Comment Button */}
-            {canComment() && (
-              <Box sx={{ 
-                mb: 2, 
-                display: 'flex', 
-                justifyContent: 'flex-end',
-                gap: 1
-              }}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<AddComment />}
-                  onClick={handleTextSelection}
-                  disabled={!canComment()}
-                  sx={{
-                    backgroundColor: '#fff',
-                    borderColor: '#ddd',
-                    '&:hover': {
-                      borderColor: '#ff6b6b',
-                      backgroundColor: '#fff5f5'
-                    }
-                  }}
-                >
-                  Add Inline Comment
-                </Button>
-                <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
-                  Select text and click to add a comment
-                </Typography>
-              </Box>
-            )}
-            
-            {/* Drag and Drop Hint */}
-            {canEdit() && (
-              <Box sx={{ 
-                mb: 2, 
-                p: 1, 
-                bgcolor: 'info.light', 
-                borderRadius: 1,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                fontSize: '0.8rem'
-              }}>
-                <FileUpload fontSize="small" />
-                <Typography variant="caption" color="info.contrastText">
-                  💡 Tip: Drag and drop images directly into the editor to embed them
-                </Typography>
-              </Box>
-            )}
-            
           <ReactQuill
               ref={quillRef}
             theme="snow"
@@ -1221,42 +1122,6 @@ function DocumentEditor() {
               className="doceditor-quill"
               readOnly={!canEdit()}
           />
-          
-          {/* Drag Overlay */}
-          {isDragOver && canEdit() && (
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: 'rgba(255, 107, 107, 0.9)',
-                zIndex: 1000,
-                borderRadius: 1,
-                border: '2px dashed #fff'
-              }}
-            >
-              <Box
-                sx={{
-                  textAlign: 'center',
-                  color: 'white',
-                  p: 3
-                }}
-              >
-                <FileUpload sx={{ fontSize: 48, mb: 2 }} />
-                <Typography variant="h6" sx={{ mb: 1 }}>
-                  Drop Images Here
-                </Typography>
-                <Typography variant="body2">
-                  Drag and drop image files to embed them in the document
-                </Typography>
-              </Box>
-            </Box>
-          )}
         </div>
           
         {showSidebar && (
@@ -1312,21 +1177,12 @@ function DocumentEditor() {
                     </Typography>
                   )}
               {comments.map((c, i) => (
-                <div key={i} className="doceditor-comment-item" data-comment-id={i}>
+                <div key={i} className="doceditor-comment-item">
                   <div className="doceditor-comment-meta">
                     <span className="doceditor-comment-author">
                       {c.author && typeof c.author === 'object' ? c.author.name : c.author}
                     </span>
                     {c.date && <span className="doceditor-comment-date">{c.date}</span>}
-                    {c.position && (
-                      <Chip 
-                        label="Inline" 
-                        size="small" 
-                        color="primary" 
-                        variant="outlined"
-                        sx={{ fontSize: '0.7rem', height: '20px' }}
-                      />
-                    )}
                     {canEdit() && (
                       <IconButton 
                         size="small" 
@@ -1338,13 +1194,6 @@ function DocumentEditor() {
                     )}
                   </div>
                   <div className="doceditor-comment-text">{c.text}</div>
-                  {c.position && (
-                    <Box sx={{ mt: 1, p: 1, bgcolor: 'grey.50', borderRadius: 1, fontSize: '0.8rem' }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Comment on text at position {c.position.index}
-                      </Typography>
-                    </Box>
-                  )}
                 </div>
               ))}
             </div>
@@ -1475,82 +1324,6 @@ function DocumentEditor() {
           </Alert>
         ) : null}
       </Snackbar>
-      
-      {/* Upload Status Notifications */}
-      <Snackbar open={!!uploadStatus} autoHideDuration={3000} onClose={() => setUploadStatus(null)} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
-        {uploadStatus === 'uploading' ? (
-          <Alert severity="info" sx={{ width: '100%' }}>
-            <Box display="flex" alignItems="center" gap={1}>
-              <CircularProgress size={20} />
-              Uploading images...
-            </Box>
-          </Alert>
-        ) : uploadStatus === 'success' ? (
-          <Alert severity="success" sx={{ width: '100%' }}>
-            Images uploaded and document saved successfully!
-          </Alert>
-        ) : uploadStatus === 'error' ? (
-          <Alert severity="error" sx={{ width: '100%' }}>
-            Failed to upload images. Please try again.
-          </Alert>
-        ) : null}
-      </Snackbar>
-
-      {/* Inline Comment Dialog */}
-      <Dialog 
-        open={showCommentDialog} 
-        onClose={handleCancelInlineComment}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          <Box display="flex" alignItems="center" gap={1}>
-            <Comment color="primary" />
-            <Typography variant="h6">Add Inline Comment</Typography>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-              Selected Text:
-            </Typography>
-            <Box 
-              sx={{ 
-                p: 2, 
-                bgcolor: 'grey.100', 
-                borderRadius: 1,
-                border: '1px solid #ddd',
-                fontStyle: 'italic'
-              }}
-            >
-              "{selectedText}"
-            </Box>
-          </Box>
-          <TextField
-            fullWidth
-            multiline
-            rows={4}
-            label="Your Comment"
-            value={inlineCommentText}
-            onChange={(e) => setInlineCommentText(e.target.value)}
-            placeholder="Add your comment about this text..."
-            variant="outlined"
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCancelInlineComment} color="inherit">
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleAddInlineComment} 
-            variant="contained" 
-            disabled={!inlineCommentText.trim()}
-            startIcon={<AddComment />}
-          >
-            Add Comment
-          </Button>
-        </DialogActions>
-      </Dialog>
     </div>
   );
 }

@@ -20,6 +20,8 @@ import {
   InputLabel,
   FormControl,
   CircularProgress,
+  Alert,
+  Snackbar,
 } from "@mui/material";
 import "./EditorPage.css";
 
@@ -39,6 +41,8 @@ function EditorPage() {
   const [roleModalOpen, setRoleModalOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState(null);
   const quillRef = useRef();
 
   const getToken = () => localStorage.getItem("token") || "";
@@ -419,6 +423,96 @@ const handleExportToWord = async () => {
     }
   };
 
+  // Drag and drop handlers for image upload
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+
+    if (imageFiles.length === 0) {
+      setUploadStatus('error');
+      setTimeout(() => setUploadStatus(null), 3000);
+      return;
+    }
+
+    try {
+      setUploadStatus('uploading');
+      
+      for (const file of imageFiles) {
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          console.warn('File too large:', file.name);
+          continue;
+        }
+
+        // Convert file to base64 for embedding
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          const base64Data = event.target.result;
+          
+          // Get current cursor position
+          const quill = quillRef.current?.getEditor();
+          const range = quill?.getSelection() || { index: quill?.getLength() || 0 };
+          
+          // Insert image at cursor position
+          if (quill) {
+            quill.insertEmbed(range.index, 'image', base64Data);
+            quill.setSelection(range.index + 1);
+            
+            // Auto-save the document after image upload
+            setTimeout(() => {
+              const autoTitle = title.trim() || quillValue.replace(/<[^>]+>/g, "").slice(0, 30) || "Untitled";
+              fetch(`http://localhost:5000/api/document/${documentId}`, {
+                method: "PUT",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${getToken()}`,
+                },
+                body: JSON.stringify({ content: quillValue, title: autoTitle }),
+              });
+            }, 500);
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+
+      setUploadStatus('success');
+      setTimeout(() => setUploadStatus(null), 3000);
+      
+      // Auto-save the document after all images are uploaded
+      setTimeout(() => {
+        const autoTitle = title.trim() || quillValue.replace(/<[^>]+>/g, "").slice(0, 30) || "Untitled";
+        fetch(`http://localhost:5000/api/document/${documentId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${getToken()}`,
+          },
+          body: JSON.stringify({ content: quillValue, title: autoTitle }),
+        });
+      }, 1000);
+    } catch (error) {
+      console.error('Error uploading images:', error);
+      setUploadStatus('error');
+      setTimeout(() => setUploadStatus(null), 3000);
+    }
+  };
+
   return (
     <div className="editor-root">
       <div className="editor-header-row">
@@ -498,7 +592,34 @@ const handleExportToWord = async () => {
             ))}
           </ul>
         </div>
-        <div className="editor-quill-box">
+        
+        {/* Drag and Drop Hint */}
+        <Box sx={{ 
+          mb: 2, 
+          p: 1, 
+          bgcolor: 'info.light', 
+          borderRadius: 1,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          fontSize: '0.8rem'
+        }}>
+          <Typography variant="caption" color="info.contrastText">
+            💡 Tip: Drag and drop images directly into the editor to embed them
+          </Typography>
+        </Box>
+        <div 
+          className="editor-quill-box"
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          style={{
+            position: 'relative',
+            border: isDragOver ? '2px dashed #ff6b6b' : 'none',
+            backgroundColor: isDragOver ? 'rgba(255, 107, 107, 0.1)' : 'transparent',
+            transition: 'all 0.2s ease'
+          }}
+        >
           <ReactQuill
             ref={quillRef}
             theme="snow"
@@ -506,6 +627,41 @@ const handleExportToWord = async () => {
             onChange={setQuillValue}
             placeholder="Start writing your collaborative document here..."
           />
+          
+          {/* Drag Overlay */}
+          {isDragOver && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(255, 107, 107, 0.9)',
+                zIndex: 1000,
+                borderRadius: 1,
+                border: '2px dashed #fff'
+              }}
+            >
+              <Box
+                sx={{
+                  textAlign: 'center',
+                  color: 'white',
+                  p: 3
+                }}
+              >
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  Drop Images Here
+                </Typography>
+                <Typography variant="body2">
+                  Drag and drop image files to embed them in the document
+                </Typography>
+              </Box>
+            </Box>
+          )}
         </div>
         <div className="editor-comments-section">
           <Typography variant="h6" className="editor-comments-title">Comments</Typography>
@@ -559,6 +715,26 @@ const handleExportToWord = async () => {
           </FormControl>
         </Box>
       </Modal>
+      
+      {/* Upload Status Notifications */}
+      <Snackbar open={!!uploadStatus} autoHideDuration={3000} onClose={() => setUploadStatus(null)} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+        {uploadStatus === 'uploading' ? (
+          <Alert severity="info" sx={{ width: '100%' }}>
+            <Box display="flex" alignItems="center" gap={1}>
+              <CircularProgress size={20} />
+              Uploading images...
+            </Box>
+          </Alert>
+        ) : uploadStatus === 'success' ? (
+          <Alert severity="success" sx={{ width: '100%' }}>
+            Images uploaded and document saved successfully!
+          </Alert>
+        ) : uploadStatus === 'error' ? (
+          <Alert severity="error" sx={{ width: '100%' }}>
+            Failed to upload images. Please try again.
+          </Alert>
+        ) : null}
+      </Snackbar>
     </div>
   );
 }

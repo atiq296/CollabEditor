@@ -297,6 +297,7 @@ function Dashboard() {
           <div className="dashboard-user-section">
             <div className="dashboard-user-profile">
               <Avatar 
+                src={user?.avatar ? `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/uploads/avatars/${user.avatar}` : null}
                 className="dashboard-user-avatar"
                 sx={{ 
                   width: 56, 
@@ -380,15 +381,25 @@ function Dashboard() {
           </div>
 
           <div className="dashboard-header-actions">
-        <Button
+            <Button
+              variant="outlined"
+              color="secondary"
+              className="dashboard-profile-btn"
+              component={Link}
+              to="/profile"
+              startIcon={<Person />}
+            >
+              Profile
+            </Button>
+            <Button
               variant="outlined"
               color="primary"
-          className="dashboard-logout-btn"
-          onClick={handleLogout}
+              className="dashboard-logout-btn"
+              onClick={handleLogout}
               startIcon={<Logout />}
-        >
+            >
               Logout
-        </Button>
+            </Button>
           </div>
         </div>
       </header>

@@ -1,0 +1,326 @@
+.profile-management-root {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a2342 0%, #274690 100%);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.profile-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  max-width: 800px;
+}
+
+.profile-title {
+  color: #fff !important;
+  font-weight: 700 !important;
+  margin-bottom: 0.5rem !important;
+  font-size: 2.5rem !important;
+}
+
+.profile-subtitle {
+  color: rgba(255, 255, 255, 0.8) !important;
+  font-size: 1.1rem !important;
+}
+
+.profile-alert {
+  margin-bottom: 2rem;
+  max-width: 800px;
+  width: 100%;
+}
+
+.profile-card {
+  max-width: 1000px;
+  width: 100%;
+  background: #fff !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+  overflow: hidden;
+}
+
+.avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+}
+
+.avatar-container {
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.avatar-container:hover {
+  transform: scale(1.05);
+}
+
+.profile-avatar {
+  border: 4px solid #e3eafc !important;
+  box-shadow: 0 4px 16px rgba(39, 70, 144, 0.2) !important;
+}
+
+.avatar-edit-button {
+  position: absolute !important;
+  bottom: 0 !important;
+  right: 0 !important;
+  background: #274690 !important;
+  color: #fff !important;
+  border: 3px solid #fff !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+.avatar-edit-button:hover {
+  background: #1a365d !important;
+}
+
+.upload-button {
+  background: linear-gradient(90deg, #274690 0%, #0a2342 100%) !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  padding: 0.75rem 1.5rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.upload-button:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(39, 70, 144, 0.3) !important;
+}
+
+.profile-info {
+  padding: 2rem;
+}
+
+.profile-header-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.profile-name {
+  color: #274690 !important;
+  font-weight: 700 !important;
+  margin: 0 !important;
+}
+
+.profile-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.edit-button {
+  background: linear-gradient(90deg, #274690 0%, #0a2342 100%) !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  padding: 0.75rem 1.5rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.edit-button:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(39, 70, 144, 0.3) !important;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.save-button {
+  background: linear-gradient(90deg, #21c47b 0%, #0bab64 100%) !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  padding: 0.75rem 1.5rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.save-button:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(33, 196, 123, 0.3) !important;
+}
+
+.cancel-button {
+  border: 2px solid #e0e0e0 !important;
+  color: #666 !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  padding: 0.75rem 1.5rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.cancel-button:hover {
+  border-color: #274690 !important;
+  color: #274690 !important;
+  background: rgba(39, 70, 144, 0.05) !important;
+}
+
+.profile-divider {
+  margin: 2rem 0 !important;
+  border-color: #e0e0e0 !important;
+}
+
+.info-section {
+  margin-bottom: 2rem;
+}
+
+.section-title {
+  color: #274690 !important;
+  font-weight: 700 !important;
+  margin-bottom: 1.5rem !important;
+  font-size: 1.25rem !important;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.input-icon {
+  color: #274690 !important;
+  margin-right: 0.5rem !important;
+}
+
+/* Custom TextField styles */
+.info-section .MuiTextField-root {
+  margin-bottom: 1rem;
+}
+
+.info-section .MuiTextField-root .MuiOutlinedInput-root {
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.info-section .MuiTextField-root .MuiOutlinedInput-root:hover {
+  box-shadow: 0 2px 8px rgba(39, 70, 144, 0.1);
+}
+
+.info-section .MuiTextField-root .MuiOutlinedInput-root.Mui-focused {
+  box-shadow: 0 0 0 2px rgba(39, 70, 144, 0.2);
+}
+
+.info-section .MuiTextField-root .MuiOutlinedInput-root fieldset {
+  border-color: #e0e0e0;
+  transition: border-color 0.2s ease;
+}
+
+.info-section .MuiTextField-root .MuiOutlinedInput-root:hover fieldset {
+  border-color: #274690;
+}
+
+.info-section .MuiTextField-root .MuiOutlinedInput-root.Mui-focused fieldset {
+  border-color: #274690;
+}
+
+/* Disabled state */
+.info-section .MuiTextField-root .MuiOutlinedInput-root.Mui-disabled {
+  background-color: #f8f9fa;
+  opacity: 0.7;
+}
+
+/* Avatar upload dialog */
+.avatar-upload-preview {
+  display: flex;
+  justify-content: center;
+  margin: 1rem 0;
+}
+
+/* Responsive design */
+@media (max-width: 900px) {
+  .profile-management-root {
+    padding: 1rem;
+  }
+  
+  .profile-title {
+    font-size: 2rem !important;
+  }
+  
+  .profile-header-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .profile-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  
+  .edit-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  
+  .avatar-section {
+    padding: 1rem;
+  }
+  
+  .profile-info {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .profile-title {
+    font-size: 1.75rem !important;
+  }
+  
+  .profile-subtitle {
+    font-size: 1rem !important;
+  }
+  
+  .profile-card {
+    border-radius: 12px !important;
+  }
+  
+  .profile-avatar {
+    width: 100px !important;
+    height: 100px !important;
+  }
+  
+  .edit-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .edit-actions .MuiButton-root {
+    width: 100%;
+  }
+}
+
+/* Animation for avatar upload */
+@keyframes avatarPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.avatar-container:hover .profile-avatar {
+  animation: avatarPulse 0.6s ease-in-out;
+}
+
+/* Loading state */
+.profile-card .MuiCircularProgress-root {
+  color: #274690 !important;
+}
+
+/* Success/Error message animations */
+.profile-alert {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+} 

@@ -8,6 +8,7 @@ import DocumentViewer from "./pages/DocumentViewer";
 import SpreadsheetPage from "./pages/SpreadsheetPage";
 import SpreadsheetViewer from "./pages/SpreadsheetViewer";
 import HomePage from "./pages/HomePage";
+import ProfileManagement from "./pages/ProfileManagement";
 import { ChatProvider } from "./contexts/ChatContext";
 import GlobalChat from "./components/GlobalChat";
 import VerifyOtp from "./pages/VerifyOtp";
@@ -31,6 +32,7 @@ function App() {
             <Route path="/verify-otp" element={<VerifyOtp />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password/:token" element={<ResetPassword />} />
+            <Route path="/profile" element={<ProfileManagement />} />
           </Routes>
         <GlobalChat />
       </BrowserRouter>

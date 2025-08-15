@@ -2,9 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 
 const app = express();
 
@@ -20,50 +17,9 @@ const io = new Server(server, {
   }
 });
 
-// ✅ File Upload Configuration
-const uploadsDir = path.join(__dirname, 'uploads');
-const avatarsDir = path.join(uploadsDir, 'avatars');
-
-// Create upload directories if they don't exist
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-if (!fs.existsSync(avatarsDir)) {
-  fs.mkdirSync(avatarsDir, { recursive: true });
-}
-
-// Configure multer for avatar uploads
-const avatarStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, avatarsDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'avatar-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const avatarUpload = multer({
-  storage: avatarStorage,
-  limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
-  },
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'), false);
-    }
-  }
-});
-
 // ✅ Middleware
 app.use(cors());
-app.use(express.json({ limit: '10mb' })); // Increase payload size limit for large documents/images
-app.use(express.urlencoded({ extended: true }));
-
-// ✅ Static file serving
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(express.json({ limit: '10mb' })); // Increase payload size limit
 
 // ✅ Routes
 const authRoutes = require('./routes/auth');
@@ -149,6 +105,18 @@ io.on('connection', (socket) => {
       timestamp: Date.now()
     });
     console.log(`👆 Cursor update from ${username} in ${documentId}`);
+  });
+
+  socket.on('import-content', ({ documentId, content }) => {
+    // Broadcast imported content to all users in the document
+    io.to(documentId).emit('receive-imported-content', content);
+    console.log(`📄 Imported content broadcasted for ${documentId}`);
+  });
+
+  socket.on('update-document', ({ documentId, content }) => {
+    // Broadcast the updated document content to all users in the document
+    io.to(documentId).emit('document-updated', content);
+    console.log(`📄 Document updated for ${documentId}`);
   });
 
   socket.on('disconnect', () => {

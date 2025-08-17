@@ -19,6 +19,7 @@
     "html2pdf.js": "^0.10.3",
     "mammoth": "^1.9.1",
     "quill": "^2.0.3",
+    "quill-better-table": "^1.2.10",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-icons": "^5.5.0",

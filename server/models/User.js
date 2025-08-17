@@ -15,6 +15,17 @@ const userSchema = new mongoose.Schema({
   linkedin: { type: String },
   github: { type: String },
   twitter: { type: String },
+  instagram: { type: String },
+  facebook: { type: String },
+  youtube: { type: String },
+  discord: { type: String },
+  telegram: { type: String },
+  whatsapp: { type: String },
+  snapchat: { type: String },
+  tiktok: { type: String },
+  reddit: { type: String },
+  twitch: { type: String },
+  pinterest: { type: String },
   avatar: { type: String }, // Store filename of uploaded avatar
   // Authentication fields
   otp: { type: String },

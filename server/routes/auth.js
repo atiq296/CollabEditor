@@ -360,7 +360,18 @@ router.put('/profile', require('../middleware/auth'), (req, res, next) => {
       website,
       linkedin,
       github,
-      twitter
+      twitter,
+      instagram,
+      facebook,
+      youtube,
+      discord,
+      telegram,
+      whatsapp,
+      snapchat,
+      tiktok,
+      reddit,
+      twitch,
+      pinterest
     } = req.body;
 
     const user = await User.findById(req.userId);
@@ -392,7 +403,18 @@ router.put('/profile', require('../middleware/auth'), (req, res, next) => {
       website: website !== undefined ? website : user.website,
       linkedin: linkedin !== undefined ? linkedin : user.linkedin,
       github: github !== undefined ? github : user.github,
-      twitter: twitter !== undefined ? twitter : user.twitter
+      twitter: twitter !== undefined ? twitter : user.twitter,
+      instagram: instagram !== undefined ? instagram : user.instagram,
+      facebook: facebook !== undefined ? facebook : user.facebook,
+      youtube: youtube !== undefined ? youtube : user.youtube,
+      discord: discord !== undefined ? discord : user.discord,
+      telegram: telegram !== undefined ? telegram : user.telegram,
+      whatsapp: whatsapp !== undefined ? whatsapp : user.whatsapp,
+      snapchat: snapchat !== undefined ? snapchat : user.snapchat,
+      tiktok: tiktok !== undefined ? tiktok : user.tiktok,
+      reddit: reddit !== undefined ? reddit : user.reddit,
+      twitch: twitch !== undefined ? twitch : user.twitch,
+      pinterest: pinterest !== undefined ? pinterest : user.pinterest
     };
 
     // Handle avatar upload if present

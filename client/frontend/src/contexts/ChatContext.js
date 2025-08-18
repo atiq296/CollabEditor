@@ -15,11 +15,11 @@ export const ChatProvider = ({ children }) => {
   const [messages, setMessages] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
   const [username, setUsername] = useState('');
+  const [authToken, setAuthToken] = useState(localStorage.getItem('token'));
   const socketRef = useRef(null);
 
   // Get username from token
-  const getUsername = () => {
-    const token = localStorage.getItem('token');
+  const getUsernameFromToken = (token) => {
     if (!token) return null;
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
@@ -29,20 +29,38 @@ export const ChatProvider = ({ children }) => {
     }
   };
 
-  // Check if user is authenticated
-  const isAuthenticated = () => {
-    return !!localStorage.getItem('token');
-  };
+  // Auth state
+  const isAuthenticated = !!authToken;
+
+  // Watch for token changes (login/logout) and update auth state
+  useEffect(() => {
+    const handleStorage = () => {
+      setAuthToken(localStorage.getItem('token'));
+    };
+    window.addEventListener('storage', handleStorage);
+    const interval = setInterval(() => {
+      const token = localStorage.getItem('token');
+      setAuthToken((prev) => (prev !== token ? token : prev));
+    }, 1000);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
-    if (!isAuthenticated()) {
+    if (!isAuthenticated) {
       setMessages([]);
       setIsConnected(false);
       setUsername('');
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
       return;
     }
 
-    const currentUsername = getUsername();
+    const currentUsername = getUsernameFromToken(authToken);
     if (!currentUsername) return;
 
     setUsername(currentUsername);
@@ -67,7 +85,7 @@ export const ChatProvider = ({ children }) => {
     // Load chat history
     fetch('http://localhost:5000/api/chat/history', {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${authToken}`
       }
     })
     .then(res => res.json())
@@ -83,7 +101,7 @@ export const ChatProvider = ({ children }) => {
     return () => {
       socket.disconnect();
     };
-  }, []);
+  }, [authToken]);
 
   const sendMessage = (text) => {
     if (!text.trim() || !isConnected || !username) return;
@@ -110,7 +128,7 @@ export const ChatProvider = ({ children }) => {
     sendMessage,
     isConnected,
     username,
-    isAuthenticated: isAuthenticated(),
+    isAuthenticated,
     clearMessages
   };
 

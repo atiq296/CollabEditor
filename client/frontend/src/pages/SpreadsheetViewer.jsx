@@ -150,9 +150,7 @@ function SpreadsheetViewer() {
     })
       .then((res) => {
         if (!res.ok) {
-          if (res.status === 403) {
-            throw new Error('Access denied: You do not have permission to view this spreadsheet. Please check if it was shared with your account.');
-          } else if (res.status === 404) {
+          if (res.status === 404) {
             throw new Error('Spreadsheet not found: The requested spreadsheet does not exist.');
           } else if (res.status === 401) {
             throw new Error('Authentication failed: Please log in again.');
@@ -180,21 +178,8 @@ function SpreadsheetViewer() {
         
         setTitle(data.title || 'Untitled Spreadsheet');
         
-        // Set document role based on user's relationship to this spreadsheet
-        const currentUserId = getCurrentUserId();
-        if (data.createdBy === currentUserId || data.createdBy?._id === currentUserId) {
-          setDocumentRole('Owner');
-        } else {
-          // Check if user is a collaborator
-          const collaborator = data.collaborators?.find(c => 
-            c.user._id === currentUserId || c.user === currentUserId
-          );
-          if (collaborator) {
-            setDocumentRole(collaborator.role);
-          } else {
-            setDocumentRole('Viewer'); // Default to viewer if not specified
-          }
-        }
+        // All users now have owner access
+        setDocumentRole(data.userRole || 'Owner');
         setLoading(false);
       })
       .catch((error) => {
@@ -419,7 +404,7 @@ function SpreadsheetViewer() {
           }}>
             <Visibility fontSize="small" />
             <Typography variant="body2">
-              You are viewing this spreadsheet in read-only mode. {canEdit() && 'Click "Edit Spreadsheet" to make changes.'}
+              You are viewing this spreadsheet in read-only mode.
             </Typography>
           </Box>
         </div>
@@ -435,7 +420,7 @@ function SpreadsheetViewer() {
               height="auto"
               width="100%"
               rowHeaders={true}
-              colHeaders={true}
+              colHeaders={(index) => index + 1}
               stretchH="all"
               autoWrapRow={true}
               autoWrapCol={true}

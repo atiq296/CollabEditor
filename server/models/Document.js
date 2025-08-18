@@ -36,6 +36,8 @@ const DocumentSchema = new mongoose.Schema({
 
   spreadsheet: {
     data: { type: Array, default: [] },
+    columnHeaders: { type: Object, default: {} },
+    rowHeaders: { type: Object, default: {} },
     updatedAt: { type: Date, default: Date.now }
   }
 }, { timestamps: true });

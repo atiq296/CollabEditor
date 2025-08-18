@@ -27,6 +27,10 @@ const chatMessageSchema = new mongoose.Schema({
 // Index for efficient querying by timestamp
 chatMessageSchema.index({ timestamp: -1 });
 
+// TTL index to automatically delete messages 24 hours after creation
+// Uses Mongoose's built-in createdAt field from { timestamps: true }
+chatMessageSchema.index({ createdAt: 1 }, { expireAfterSeconds: 86400 });
+
 // Limit the number of messages stored (keep last 1000 messages)
 chatMessageSchema.statics.cleanupOldMessages = async function() {
   const count = await this.countDocuments();

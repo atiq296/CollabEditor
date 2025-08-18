@@ -366,14 +366,12 @@ function DocumentEditor() {
         console.error('Token:', getToken() ? 'Present' : 'Missing');
         
         let errorMessage = 'Failed to load document. ';
-        if (error.message.includes('403')) {
-          errorMessage += 'Access denied. You may not have permission to view this document.';
-        } else if (error.message.includes('404')) {
+        if (error.message.includes('404')) {
           errorMessage += 'Document not found.';
         } else if (error.message.includes('401')) {
           errorMessage += 'Authentication failed. Please log in again.';
         } else {
-          errorMessage += 'Please check your permissions or try again.';
+          errorMessage += 'Please try again.';
         }
         
         alert(errorMessage);

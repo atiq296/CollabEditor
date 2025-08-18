@@ -61,12 +61,6 @@ function DocumentViewer() {
     }
   };
 
-  // Permission checks
-  const isOwner = () => userRole === 'Owner' || documentRole === 'Owner';
-  const isEditor = () => userRole === 'Editor' || documentRole === 'Editor';
-  const isViewer = () => userRole === 'Viewer' || documentRole === 'Viewer';
-  const canEdit = () => isOwner() || isEditor();
-
   useEffect(() => {
     const token = getToken();
     
@@ -87,9 +81,7 @@ function DocumentViewer() {
     })
       .then((res) => {
         if (!res.ok) {
-          if (res.status === 403) {
-            throw new Error('Access denied: You do not have permission to view this document. Please check if it was shared with your account.');
-          } else if (res.status === 404) {
+          if (res.status === 404) {
             throw new Error('Document not found: The requested document does not exist.');
           } else if (res.status === 401) {
             throw new Error('Authentication failed: Please log in again.');
@@ -100,40 +92,15 @@ function DocumentViewer() {
         return res.json();
       })
       .then((data) => {
-        console.log('Document loaded successfully:', {
-          id: data._id,
-          title: data.title,
-          content: data.content,
-          contentLength: data.content?.length || 0,
-          createdBy: data.createdBy,
-          collaborators: data.collaborators?.length || 0,
-          hasContent: !!data.content
-        });
-        
         setContent(data.content || '');
         setTitle(data.title || 'Untitled Document');
         setComments(data.comments || []);
-        
-        // Set document role based on user's relationship to this document
-        const currentUserId = getCurrentUserId();
-        if (data.createdBy === currentUserId || data.createdBy?._id === currentUserId) {
-          setDocumentRole('Owner');
-        } else {
-          // Check if user is a collaborator
-          const collaborator = data.collaborators?.find(c => 
-            c.user._id === currentUserId || c.user === currentUserId
-          );
-          if (collaborator) {
-            setDocumentRole(collaborator.role);
-          } else {
-            setDocumentRole('Viewer'); // Default to viewer if not specified
-          }
-        }
-        setLoading(false);
+        setDocumentRole(data.userRole || 'Owner');
       })
-      .catch((error) => {
-        console.error('Error loading document:', error);
-        setError(error.message);
+      .catch((err) => {
+        setError(err.message);
+      })
+      .finally(() => {
         setLoading(false);
       });
   }, [documentId]);
@@ -328,17 +295,6 @@ function DocumentViewer() {
           </div>
 
           <div className="documentviewer-header-actions">
-            {canEdit() && (
-              <Button
-                variant="contained"
-                color="primary"
-                className="documentviewer-edit-btn"
-                onClick={() => navigate(`/editor/${documentId}`)}
-                startIcon={<Edit />}
-              >
-                Edit Document
-              </Button>
-            )}
             <Button
               variant="outlined"
               color="primary"
@@ -369,7 +325,7 @@ function DocumentViewer() {
           }}>
             <Visibility fontSize="small" />
             <Typography variant="body2">
-              You are viewing this document in read-only mode. {canEdit() && 'Click "Edit Document" to make changes.'}
+              You are viewing this document in read-only mode.
             </Typography>
           </Box>
         </div>
@@ -416,6 +372,7 @@ function DocumentViewer() {
             </div>
           </div>
         )}
+
       </main>
     </div>
   );

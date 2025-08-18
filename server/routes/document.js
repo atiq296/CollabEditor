@@ -67,11 +67,7 @@ router.post('/:id/share', authMiddleware, async (req, res) => {
       isSpreadsheet: !!(doc.spreadsheet && Array.isArray(doc.spreadsheet.data) && doc.spreadsheet.data.length > 0)
     });
 
-    if (doc.createdBy.toString() !== req.userId.toString()) {
-      console.log('❌ Share denied: Not the owner');
-      return res.status(403).json({ message: "Only owner can share" });
-    }
-
+    // All authenticated users can share documents
     const user = await User.findOne({ email });
     if (!user) {
       console.log('❌ User not found for sharing:', {
@@ -205,59 +201,14 @@ router.get('/:id', authMiddleware, async (req, res) => {
       isSpreadsheet: !!(doc.spreadsheet && Array.isArray(doc.spreadsheet.data) && doc.spreadsheet.data.length > 0)
     });
 
-    const isOwner = doc.createdBy.equals(req.userId);
-    const isCollaborator = doc.collaborators.some(c => c.user._id.equals(req.userId));
-
-    console.log('🔐 Document access check:', {
-      documentId: req.params.id,
-      userId: req.userId,
-      isOwner,
-      isCollaborator,
-      collaborators: doc.collaborators.map(c => ({ 
-        userId: c.user._id, 
-        userName: c.user.name,
-        userEmail: c.user.email,
-        role: c.role 
-      })),
-      requestingUserEmail: req.userId, // We'll need to get this from the user
-      hasContent: !!doc.content,
-      contentLength: doc.content?.length || 0
-    });
-
-    // Get the requesting user's email for better debugging
-    try {
-      const requestingUser = await User.findById(req.userId);
-      console.log('👤 Requesting user details:', {
-        userId: req.userId,
-        email: requestingUser?.email,
-        name: requestingUser?.name,
-        role: requestingUser?.role
-      });
-      
-      // Check if this user is a collaborator and what their role is
-      const userCollaborator = doc.collaborators.find(c => c.user._id.equals(req.userId));
-      if (userCollaborator) {
-        console.log('🎭 User collaborator details:', {
-          userId: req.userId,
-          userEmail: requestingUser?.email,
-          collaboratorRole: userCollaborator.role,
-          isEditor: userCollaborator.role === 'Editor',
-          isViewer: userCollaborator.role === 'Viewer'
-        });
-      } else {
-        console.log('❌ User is not a collaborator on this document');
-      }
-    } catch (err) {
-      console.log('❌ Could not fetch requesting user details:', err.message);
-    }
-
-    if (!isOwner && !isCollaborator) {
-      console.log('❌ Access denied for user:', req.userId);
-      return res.status(403).json({ message: "Access denied" });
-    }
-
-    console.log('✅ Document access granted, sending response');
-    res.status(200).json(doc);
+    // All authenticated users have owner access
+    console.log('✅ Document access granted for all authenticated users');
+    
+    // Add userRole as Owner for all users
+    const responseDoc = doc.toObject();
+    responseDoc.userRole = 'Owner';
+    
+    res.status(200).json(responseDoc);
   } catch (err) {
     console.error('❌ Document fetch error:', err);
     res.status(500).json({ message: "Failed to fetch document", error: err.message });
@@ -274,23 +225,15 @@ router.put('/:id', authMiddleware, async (req, res) => {
     const doc = await Document.findById(req.params.id);
     if (!doc) return res.status(404).json({ message: 'Document not found' });
 
-    const isOwner = doc.createdBy.equals(req.userId);
-    const isEditor = doc.collaborators.some(
-      c => c.user.equals(req.userId) && c.role === 'Editor'
-    );
-
     console.log('Document update attempt:', {
       documentId: req.params.id,
       userId: req.userId,
-      isOwner,
-      isEditor,
       hasContent: !!content,
       contentLength: content?.length || 0,
       hasTitle: !!title
     });
 
-    if (!isOwner && !isEditor) return res.status(403).json({ message: "No permission to edit" });
-
+    // All authenticated users can edit
     if (content !== undefined) doc.content = content;
     if (title !== undefined && title.trim().length > 0) doc.title = title.trim();
 
@@ -317,13 +260,7 @@ router.post('/:id/comment', authMiddleware, async (req, res) => {
     const doc = await Document.findById(req.params.id);
     if (!doc) return res.status(404).json({ message: "Document not found" });
 
-    const isOwner = doc.createdBy.equals(req.userId);
-    const isEditor = doc.collaborators.some(
-      c => c.user.equals(req.userId) && c.role === 'Editor'
-    );
-
-    if (!isOwner && !isEditor) return res.status(403).json({ message: "No permission to comment" });
-
+    // All authenticated users can comment
     const newComment = {
       text,
       author: req.userId,
@@ -390,36 +327,24 @@ router.get('/:id/spreadsheet', authMiddleware, async (req, res) => {
       collaboratorsCount: doc.collaborators?.length || 0
     });
 
-    const isAllowed = doc.createdBy.equals(req.userId) ||
-      doc.collaborators.some(c =>
-        c.user.equals(req.userId) && (c.role === 'Editor' || c.role === 'Viewer')
-      );
-
-    console.log('🔐 Spreadsheet access check:', {
-      documentId: req.params.id,
-      userId: req.userId,
-      isOwner: doc.createdBy.equals(req.userId),
-      isCollaborator: doc.collaborators.some(c => c.user.equals(req.userId)),
-      isAllowed,
-      collaborators: doc.collaborators.map(c => ({ 
-        userId: c.user, 
-        role: c.role 
-      }))
-    });
-
-    if (!isAllowed) {
-      console.log('❌ Access denied for spreadsheet:', req.userId);
-      return res.status(403).json({ message: "Access denied" });
-    }
-
+    // All authenticated users can access spreadsheets
     const spreadsheetData = doc.spreadsheet?.data || [];
+    const columnHeaders = doc.spreadsheet?.columnHeaders || {};
+    const rowHeaders = doc.spreadsheet?.rowHeaders || {};
+    
     console.log('✅ Sending spreadsheet data:', {
       dataLength: spreadsheetData.length,
       isEmpty: spreadsheetData.length === 0,
-      sampleData: spreadsheetData.slice(0, 3)
+      sampleData: spreadsheetData.slice(0, 3),
+      hasColumnHeaders: Object.keys(columnHeaders).length > 0,
+      hasRowHeaders: Object.keys(rowHeaders).length > 0
     });
 
-    res.status(200).json(spreadsheetData);
+    res.status(200).json({
+      data: spreadsheetData,
+      columnHeaders,
+      rowHeaders
+    });
   } catch (err) {
     console.error('❌ Spreadsheet fetch error:', err);
     res.status(500).json({ message: "Failed to fetch spreadsheet", error: err.message });
@@ -428,14 +353,16 @@ router.get('/:id/spreadsheet', authMiddleware, async (req, res) => {
 
 // ✅ Save spreadsheet data
 router.put('/:id/spreadsheet', authMiddleware, async (req, res) => {
-  const { data, title } = req.body;
+  const { data, title, columnHeaders, rowHeaders } = req.body;
 
   console.log('💾 Spreadsheet PUT request:', {
     documentId: req.params.id,
     userId: req.userId,
     hasData: !!data,
     dataLength: data?.length || 0,
-    hasTitle: !!title
+    hasTitle: !!title,
+    hasColumnHeaders: !!columnHeaders,
+    hasRowHeaders: !!rowHeaders
   });
 
   try {
@@ -452,25 +379,7 @@ router.put('/:id/spreadsheet', authMiddleware, async (req, res) => {
       currentDataLength: doc.spreadsheet?.data?.length || 0
     });
 
-    const isEditor = doc.createdBy.equals(req.userId) ||
-      doc.collaborators.some(c => c.user.equals(req.userId) && c.role === 'Editor');
-
-    console.log('🔐 Spreadsheet save permission check:', {
-      documentId: req.params.id,
-      userId: req.userId,
-      isOwner: doc.createdBy.equals(req.userId),
-      isEditor,
-      collaborators: doc.collaborators.map(c => ({ 
-        userId: c.user, 
-        role: c.role 
-      }))
-    });
-
-    if (!isEditor) {
-      console.log('❌ No permission to save spreadsheet:', req.userId);
-      return res.status(403).json({ message: "No permission to update" });
-    }
-
+    // All authenticated users can save spreadsheets
     // Initialize spreadsheet if it doesn't exist
     if (!doc.spreadsheet) {
       doc.spreadsheet = { data: [], updatedAt: Date.now() };
@@ -478,6 +387,15 @@ router.put('/:id/spreadsheet', authMiddleware, async (req, res) => {
 
     doc.spreadsheet.data = data;
     doc.spreadsheet.updatedAt = Date.now();
+    
+    // Save custom headers
+    if (columnHeaders !== undefined) {
+      doc.spreadsheet.columnHeaders = columnHeaders;
+    }
+    if (rowHeaders !== undefined) {
+      doc.spreadsheet.rowHeaders = rowHeaders;
+    }
+    
     if (title !== undefined && title.trim().length > 0) doc.title = title.trim();
     
     await doc.save();
@@ -486,7 +404,9 @@ router.put('/:id/spreadsheet', authMiddleware, async (req, res) => {
       documentId: doc._id,
       title: doc.title,
       dataLength: doc.spreadsheet.data.length,
-      updatedAt: doc.spreadsheet.updatedAt
+      updatedAt: doc.spreadsheet.updatedAt,
+      columnHeadersCount: Object.keys(doc.spreadsheet.columnHeaders || {}).length,
+      rowHeadersCount: Object.keys(doc.spreadsheet.rowHeaders || {}).length
     });
 
     res.status(200).json({ message: "Spreadsheet saved" });

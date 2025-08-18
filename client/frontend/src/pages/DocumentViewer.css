@@ -273,6 +273,100 @@
   font-size: 0.95rem;
 }
 
+/* Version History Section */
+.documentviewer-versions-section {
+  margin-top: 2rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.documentviewer-versions-title {
+  color: #274690 !important;
+  font-weight: 700 !important;
+  margin-bottom: 1rem !important;
+  font-size: 1.2rem !important;
+}
+
+.documentviewer-versions-list {
+  max-height: 400px;
+  overflow-y: auto;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.documentviewer-versions-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.documentviewer-versions-list::-webkit-scrollbar-thumb {
+  background: #274690;
+  border-radius: 4px;
+}
+
+.documentviewer-versions-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.documentviewer-version-item {
+  padding: 1rem;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 0.5rem;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.documentviewer-version-item:hover {
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.documentviewer-version-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.documentviewer-version-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.documentviewer-version-title {
+  color: #274690 !important;
+  font-weight: 600 !important;
+}
+
+.documentviewer-version-date {
+  color: #666 !important;
+  font-size: 0.8rem !important;
+}
+
+.documentviewer-version-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.documentviewer-version-author {
+  color: #666 !important;
+  font-size: 0.8rem !important;
+}
+
+.documentviewer-version-content-preview {
+  color: #333 !important;
+  font-size: 0.85rem !important;
+  font-style: italic;
+  line-height: 1.4;
+}
+
 /* Responsive Design */
 @media (max-width: 1400px) {
   .documentviewer-header {

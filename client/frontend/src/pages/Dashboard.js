@@ -406,7 +406,7 @@ function Dashboard() {
 
       <main className="dashboard-main-box">
         <Typography variant="h4" className="dashboard-welcome" gutterBottom>
-          Welcome to CollabEditor 👋
+          CollabEditor
         </Typography>
         <Typography variant="body1" className="dashboard-subtext" gutterBottom>
           Create, collaborate, and manage your documents and spreadsheets
@@ -423,9 +423,9 @@ function Dashboard() {
             Create Document
           </Button>
           <Button
-            variant="outlined"
-            color="secondary"
-            className="dashboard-create-btn"
+            variant="contained"
+            color="success"
+            className="dashboard-create-btn dashboard-excel-btn"
             onClick={handleCreateSpreadsheet}
             startIcon={<Add />}
           >
@@ -436,8 +436,8 @@ function Dashboard() {
         <div className="dashboard-content-grid">
           <div className="dashboard-section">
             <Typography variant="h6" className="dashboard-docs-title">
-              📄 Your Documents ({totalTextDocs})
-        </Typography>
+              Documents
+            </Typography>
             {Array.isArray(textDocs) && textDocs.length > 0 ? (
           <List className="dashboard-doc-list">
                 {textDocs.map((doc) => (
@@ -481,7 +481,7 @@ function Dashboard() {
           
           <div className="dashboard-section">
             <Typography variant="h6" className="dashboard-docs-title">
-              📊 Your Spreadsheets ({totalSpreadsheets})
+               Spreadsheets
             </Typography>
             {Array.isArray(spreadsheets) && spreadsheets.length > 0 ? (
               <List className="dashboard-doc-list">

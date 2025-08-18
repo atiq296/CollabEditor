@@ -35,6 +35,7 @@
   box-sizing: border-box;
   margin: 0 auto;
   flex-shrink: 0;
+  position: relative;
 }
 
 .dashboard-header-content {
@@ -135,6 +136,10 @@
   justify-content: flex-end;
   align-items: center;
   gap: 1rem;
+  position: absolute;
+  top: 2rem;
+  right: 2.5rem;
+  z-index: 1;
 }
 
 .dashboard-action-btn {
@@ -196,12 +201,14 @@
   margin-bottom: 0.5rem !important;
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.2) !important;
   font-size: 2rem !important;
+  text-align: center !important;
 }
 
 .dashboard-subtext {
   color: rgba(255, 255, 255, 0.8) !important;
   margin-bottom: 1.5rem !important;
   font-size: 1.1rem !important;
+  text-align: center !important;
 }
 
 .dashboard-actions {
@@ -222,6 +229,25 @@
 .dashboard-create-btn:hover {
   transform: translateY(-2px) scale(1.03);
   box-shadow: 0 4px 16px 0 rgba(39, 70, 144, 0.18);
+}
+
+/* Excel-green style for Create Spreadsheet button */
+.dashboard-excel-btn {
+  background: linear-gradient(90deg, #107C41 0%, #217346 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 8px 0 rgba(16, 124, 65, 0.18) !important;
+  border: none !important;
+}
+.dashboard-excel-btn:hover {
+  background: linear-gradient(90deg, #0E6F3A 0%, #196C3E 100%) !important;
+  box-shadow: 0 6px 18px 0 rgba(16, 124, 65, 0.28) !important;
+}
+.dashboard-excel-btn:active {
+  transform: translateY(0) scale(1.01);
+}
+.dashboard-excel-btn:focus-visible {
+  outline: 3px solid rgba(16, 124, 65, 0.35);
+  outline-offset: 2px;
 }
 
 .dashboard-content-grid {
@@ -253,6 +279,7 @@
   font-weight: 700 !important;
   margin-bottom: 1rem !important;
   font-size: 1.2rem !important;
+  text-align: center !important;
 }
 
 .dashboard-doc-list {
@@ -353,6 +380,10 @@
     max-width: 95vw;
     padding: 1.5rem 1rem 1rem 1rem;
   }
+  .dashboard-header-actions {
+    top: 1.5rem;
+    right: 1rem;
+  }
   
   .dashboard-main-box {
     max-width: 95vw;
@@ -372,8 +403,10 @@
   }
   
   .dashboard-header-actions {
+    position: static;
     justify-content: center;
     width: 100%;
+    margin-top: 0.5rem;
   }
   
   .dashboard-stats-grid .MuiGrid-item {

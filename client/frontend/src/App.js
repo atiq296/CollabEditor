@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { Container, CssBaseline } from "@mui/material";
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";
@@ -14,6 +14,13 @@ import GlobalChat from "./components/GlobalChat";
 import VerifyOtp from "./pages/VerifyOtp";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+
+function ChatWrapper() {
+  const location = useLocation();
+  const hiddenRoutes = ["/", "/login", "/signup"];
+  const isHidden = hiddenRoutes.includes(location.pathname);
+  return isHidden ? null : <GlobalChat />;
+}
 
 function App() {
   return (
@@ -34,7 +41,7 @@ function App() {
             <Route path="/reset-password/:token" element={<ResetPassword />} />
             <Route path="/profile" element={<ProfileManagement />} />
           </Routes>
-        <GlobalChat />
+        <ChatWrapper />
       </BrowserRouter>
     </ChatProvider>
   );

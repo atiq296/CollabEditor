@@ -13,13 +13,7 @@ router.post('/:id/save-version', auth, async (req, res) => {
     const doc = await Document.findById(id);
     if (!doc) return res.status(404).json({ message: 'Document not found' });
 
-    // Check if user is a collaborator or owner
-    const isOwner = doc.createdBy.toString() === userId;
-    const isCollaborator = doc.collaborators.some(c => c.user.toString() === userId);
-    if (!isOwner && !isCollaborator) {
-      return res.status(403).json({ message: 'Unauthorized' });
-    }
-
+    // All authenticated users can save versions
     const versionSnapshot = {
       content,
       title,
@@ -49,12 +43,7 @@ router.get('/:id/versions', auth, async (req, res) => {
 
     if (!doc) return res.status(404).json({ message: 'Document not found' });
 
-    const isOwner = doc.createdBy.toString() === userId;
-    const isCollaborator = doc.collaborators.some(c => c.user.toString() === userId);
-    if (!isOwner && !isCollaborator) {
-      return res.status(403).json({ message: 'Unauthorized' });
-    }
-
+    // All authenticated users can view versions
     res.status(200).json(doc.versions || []);
   } catch (err) {
     console.error(err);

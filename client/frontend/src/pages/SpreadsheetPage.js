@@ -55,6 +55,8 @@ function SpreadsheetPage() {
   const [collaborators, setCollaborators] = useState([]);
   const [ownerId, setOwnerId] = useState(null);
   const [user, setUser] = useState(null);
+  const [columnHeaders, setColumnHeaders] = useState({});
+  const [rowHeaders, setRowHeaders] = useState({});
   const hotTableRef = useRef(null);
 
   const getToken = () => localStorage.getItem("token") || "";
@@ -229,7 +231,20 @@ function SpreadsheetPage() {
           sampleData: fetchedData?.slice(0, 3)
         });
         
-        if (!Array.isArray(fetchedData) || fetchedData.length === 0) {
+        // Handle new response format with headers
+        let spreadsheetData = fetchedData;
+        let headers = {};
+        
+        if (fetchedData && typeof fetchedData === 'object' && fetchedData.data) {
+          // New format with headers
+          spreadsheetData = fetchedData.data;
+          headers = {
+            columnHeaders: fetchedData.columnHeaders || {},
+            rowHeaders: fetchedData.rowHeaders || {}
+          };
+        }
+        
+        if (!Array.isArray(spreadsheetData) || spreadsheetData.length === 0) {
           console.log('Creating empty spreadsheet with default size');
           const rows = 30, // Increased initial size
             cols = 15;     // Increased initial size
@@ -239,8 +254,17 @@ function SpreadsheetPage() {
           setData(empty);
         } else {
           console.log('Setting spreadsheet data from server');
-          setData(fetchedData);
+          setData(spreadsheetData);
         }
+        
+        // Load custom headers if available
+        if (headers.columnHeaders) {
+          setColumnHeaders(headers.columnHeaders);
+        }
+        if (headers.rowHeaders) {
+          setRowHeaders(headers.rowHeaders);
+        }
+        
         setLoading(false);
       })
       .catch((error) => {
@@ -264,11 +288,15 @@ function SpreadsheetPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${getToken()}`,
         },
-        body: JSON.stringify({ data }),
+        body: JSON.stringify({ 
+          data,
+          columnHeaders,
+          rowHeaders
+        }),
       });
     }, 3000);
     return () => clearInterval(interval);
-  }, [data, documentId, isEditor]);
+  }, [data, columnHeaders, rowHeaders, documentId, isEditor]);
 
   const handleExportToExcel = () => {
     if (!data || data.length === 0) return;
@@ -284,6 +312,72 @@ function SpreadsheetPage() {
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
     });
     saveAs(fileData, `spreadsheet_${documentId}.xlsx`);
+  };
+
+  const handleEditHeaders = () => {
+    const hot = hotTableRef.current.hotInstance;
+    if (!hot) return;
+
+    const headerType = prompt(
+      'Choose what to edit:\n\n' +
+      '1. Column Headers (A, B, C...)\n' +
+      '2. Row Headers (1, 2, 3...)\n' +
+      '3. Both\n\n' +
+      'Enter 1, 2, or 3:'
+    );
+
+    if (headerType === '1') {
+      // Edit column headers
+      const colIndex = prompt(
+        'Enter column number to edit (1, 2, 3...):\n\n' +
+        'Current column headers:\n' +
+        Object.entries(columnHeaders).map(([index, name]) => 
+          `Column ${parseInt(index) + 1}: ${name || (parseInt(index) + 1)}`
+        ).join('\n')
+      );
+      if (colIndex && !isNaN(colIndex)) {
+        const index = parseInt(colIndex) - 1;
+        const currentName = columnHeaders[index] || (index + 1);
+        const newName = prompt(`Enter new name for Column ${colIndex} (current: "${currentName}"):`);
+        if (newName !== null) {
+          setColumnHeaders(prev => ({
+            ...prev,
+            [index]: newName.trim() || null
+          }));
+        }
+      }
+    } else if (headerType === '2') {
+      // Edit row headers
+      const rowIndex = prompt(
+        'Enter row number to edit (1, 2, 3...):\n\n' +
+        'Current row headers:\n' +
+        Object.entries(rowHeaders).map(([index, name]) => 
+          `Row ${parseInt(index) + 1}: ${name || (parseInt(index) + 1)}`
+        ).join('\n')
+      );
+      if (rowIndex && !isNaN(rowIndex)) {
+        const index = parseInt(rowIndex) - 1;
+        const currentName = rowHeaders[index] || (index + 1);
+        const newName = prompt(`Enter new name for Row ${rowIndex} (current: "${currentName}"):`);
+        if (newName !== null) {
+          setRowHeaders(prev => ({
+            ...prev,
+            [index]: newName.trim() || null
+          }));
+        }
+      }
+    } else if (headerType === '3') {
+      // Edit both - show a summary
+      alert(
+        'Header Editing Options:\n\n' +
+        '• Right-click on any cell and select "Edit Headers"\n' +
+        '• Double-click directly on column or row headers\n' +
+        '• Use this button to edit specific headers\n\n' +
+        'Current custom headers:\n' +
+        'Columns: ' + Object.keys(columnHeaders).length + ' custom\n' +
+        'Rows: ' + Object.keys(rowHeaders).length + ' custom'
+      );
+    }
   };
 
   // Import logic
@@ -340,7 +434,12 @@ function SpreadsheetPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ data, title }),
+        body: JSON.stringify({ 
+          data, 
+          title,
+          columnHeaders,
+          rowHeaders
+        }),
       });
       if (res.ok) {
         setSaveStatus('success');
@@ -518,6 +617,15 @@ function SpreadsheetPage() {
             Export to Excel
           </Button>
           <Button
+            variant="outlined"
+            color="secondary"
+            className="spreadsheet-action-button"
+            onClick={handleEditHeaders}
+            startIcon={<Settings />}
+          >
+            Edit Headers
+          </Button>
+          <Button
             variant="contained"
             color="primary"
             className="spreadsheet-action-button"
@@ -532,14 +640,66 @@ function SpreadsheetPage() {
       <HotTable
             ref={hotTableRef}
         data={data}
-        colHeaders
-        rowHeaders
+        colHeaders={(index) => columnHeaders[index] || (index + 1)}
+        rowHeaders={(index) => rowHeaders[index] || (index + 1)}
         readOnly={!isEditor}
         width="100%"
             height="70vh"
         stretchH="all"
         licenseKey="non-commercial-and-evaluation"
-        contextMenu={true}
+        contextMenu={{
+          items: {
+            'edit_headers': {
+              name: 'Edit Headers',
+              callback: function() {
+                const hot = hotTableRef.current.hotInstance;
+                if (hot) {
+                  const selected = hot.getSelected();
+                  if (selected && selected.length > 0) {
+                    const [startRow, startCol, endRow, endCol] = selected[0];
+                    
+                    // Check if selection includes headers
+                    if (startRow < 0 || startCol < 0) {
+                      // Header is selected, allow editing
+                      const row = startRow < 0 ? startRow : endRow;
+                      const col = startCol < 0 ? startCol : endCol;
+                      hot.selectCell(row, col);
+                      hot.getActiveEditor().beginEditing();
+                    } else {
+                      // Show dialog to select which headers to edit
+                      const headerType = prompt('Edit headers:\n1. Column Headers\n2. Row Headers\n3. Both\n\nEnter 1, 2, or 3:');
+                      if (headerType === '1') {
+                        // Edit column headers
+                        const colIndex = prompt('Enter column number to edit (1, 2, 3...):');
+                        if (colIndex && !isNaN(colIndex)) {
+                          const index = parseInt(colIndex) - 1;
+                          hot.selectCell(-1, index);
+                          hot.getActiveEditor().beginEditing();
+                        }
+                      } else if (headerType === '2') {
+                        // Edit row headers
+                        const rowIndex = prompt('Enter row number to edit (1, 2, 3...):');
+                        if (rowIndex && !isNaN(rowIndex)) {
+                          const index = parseInt(rowIndex) - 1;
+                          hot.selectCell(index, -1);
+                          hot.getActiveEditor().beginEditing();
+                        }
+                      } else if (headerType === '3') {
+                        // Edit both - start with column
+                        const colIndex = prompt('Enter column number to edit (1, 2, 3...):');
+                        if (colIndex && !isNaN(colIndex)) {
+                          const index = parseInt(colIndex) - 1;
+                          hot.selectCell(-1, index);
+                          hot.getActiveEditor().beginEditing();
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }}
         dropdownMenu={true}
         mergeCells={true}
         filters={true}
@@ -556,19 +716,46 @@ function SpreadsheetPage() {
         }}
         fixedRowsTop={1}
         fixedColumnsLeft={1}
+        afterOnCellMouseDown={(event, coords) => {
+          // Allow editing headers when double-clicked
+          if (coords.row < 0 || coords.col < 0) {
+            event.stopImmediatePropagation();
+            const hot = hotTableRef.current.hotInstance;
+            if (hot) {
+              hot.selectCell(coords.row, coords.col);
+              hot.getActiveEditor().beginEditing();
+            }
+          }
+        }}
         afterChange={(changes) => {
           if (changes) {
+            changes.forEach(([row, prop, oldValue, newValue]) => {
+              // Handle header changes
+              if (row < 0) {
+                // Column header changed
+                setColumnHeaders(prev => ({
+                  ...prev,
+                  [prop]: newValue
+                }));
+              } else if (prop < 0) {
+                // Row header changed
+                setRowHeaders(prev => ({
+                  ...prev,
+                  [row]: newValue
+                }));
+              } else {
+                // Regular cell change
                 const newData = [...data];
-                changes.forEach(([row, prop, oldValue, newValue]) => {
-                  if (newData[row]) {
-                    newData[row][prop] = newValue;
-                    // Check if we need to expand the grid
-                    if (isEditor) {
-                      checkAndExpand(row, prop, newValue);
-                    }
+                if (newData[row]) {
+                  newData[row][prop] = newValue;
+                  // Check if we need to expand the grid
+                  if (isEditor) {
+                    checkAndExpand(row, prop, newValue);
                   }
-                });
+                }
                 setData(newData);
+              }
+            });
           }
         }}
         className="spreadsheet-table"

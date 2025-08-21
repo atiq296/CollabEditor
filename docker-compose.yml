@@ -1,9 +1,10 @@
-version: '3.8'
-
 services:
   # Frontend service
   frontend:
-    image: atiq296/collabeditor-frontend:latest
+    build:
+      context: ./client/frontend
+      dockerfile: Dockerfile
+      target: production
     ports:
       - "3000:80"
     env_file:
@@ -16,7 +17,10 @@ services:
 
   # Backend service
   backend:
-    image: atiq296/collabeditor-backend:latest
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+      target: production
     ports:
       - "5000:5000"
     env_file:

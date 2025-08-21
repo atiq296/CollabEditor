@@ -46,6 +46,8 @@ import {
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
+import UserPresence from '../components/UserPresence';
+import ChatPopup from './ChatPopup';
 
 function DocumentEditor() {
   const { id: documentId } = useParams();
@@ -301,7 +303,7 @@ function DocumentEditor() {
     socketRef.current = socket;
     const username = getUsername();
     socket.emit('join-document', { documentId, username });
-    socket.on('user-list', (users) => {
+    socket.on('user-list-simple', (users) => {
       setActiveUsers(users);
     });
     return () => socket.disconnect();
@@ -631,27 +633,40 @@ function DocumentEditor() {
     let importedContent = '';
 
     try {
+      console.log(`📄 Importing file: ${file.name}, size: ${file.size} bytes`);
+      
       if (file.name.endsWith('.docx')) {
         const mammoth = await import('mammoth');
         const arrayBuffer = await file.arrayBuffer();
         const result = await mammoth.convertToHtml({ arrayBuffer });
         importedContent = result.value;
+        console.log(`✅ DOCX converted, content length: ${importedContent.length}`);
         setContent(importedContent);
       } else if (file.name.endsWith('.html')) {
         const reader = new FileReader();
         reader.onload = (evt) => {
           importedContent = evt.target.result;
+          console.log(`✅ HTML loaded, content length: ${importedContent.length}`);
           setContent(importedContent);
+          
+          // Emit imported content to other users after setting content
+          const socket = socketRef.current;
+          if (socket) {
+            console.log(`📤 Broadcasting imported content to other users...`);
+            socket.emit('import-content', { documentId, content: importedContent });
+          }
         };
         reader.readAsText(file);
+        return; // Exit early for HTML files since we handle emission in the callback
       } else {
         alert('Only .docx and .html files are supported for import.');
         return;
       }
 
-      // Emit imported content to other users
+      // Emit imported content to other users (for DOCX files)
       const socket = socketRef.current;
       if (socket) {
+        console.log(`📤 Broadcasting imported content to other users...`);
         socket.emit('import-content', { documentId, content: importedContent });
       }
     } catch (error) {
@@ -664,12 +679,47 @@ function DocumentEditor() {
     const socket = socketRef.current;
     if (!socket) return;
 
+    let chunkedContent = '';
+    let expectedChunks = 0;
+    let receivedChunks = 0;
+
     const handleReceiveImportedContent = (content) => {
+      console.log(`📥 Received imported content, length: ${content.length} characters`);
       setContent(content);
     };
 
+    const handleImportContentStart = ({ totalChunks, totalSize }) => {
+      console.log(`📦 Starting to receive ${totalChunks} chunks, total size: ${totalSize} characters`);
+      chunkedContent = '';
+      expectedChunks = totalChunks;
+      receivedChunks = 0;
+    };
+
+    const handleImportContentChunk = ({ chunk, index, totalChunks }) => {
+      console.log(`📦 Received chunk ${index + 1}/${totalChunks}, size: ${chunk.length} characters`);
+      chunkedContent += chunk;
+      receivedChunks++;
+    };
+
+    const handleImportContentComplete = ({ totalChunks }) => {
+      console.log(`✅ Received all ${totalChunks} chunks, total content length: ${chunkedContent.length} characters`);
+      setContent(chunkedContent);
+      chunkedContent = '';
+      expectedChunks = 0;
+      receivedChunks = 0;
+    };
+
     socket.on('receive-imported-content', handleReceiveImportedContent);
-    return () => socket.off('receive-imported-content', handleReceiveImportedContent);
+    socket.on('import-content-start', handleImportContentStart);
+    socket.on('import-content-chunk', handleImportContentChunk);
+    socket.on('import-content-complete', handleImportContentComplete);
+    
+    return () => {
+      socket.off('receive-imported-content', handleReceiveImportedContent);
+      socket.off('import-content-start', handleImportContentStart);
+      socket.off('import-content-chunk', handleImportContentChunk);
+      socket.off('import-content-complete', handleImportContentComplete);
+    };
   }, [socketRef]);
 
   const handleAddComment = async () => {
@@ -1462,22 +1512,7 @@ function DocumentEditor() {
               ))}
             </div>
 
-              <div className="doceditor-sidebar-section">
-                <Typography variant="h6" className="doceditor-section-title">
-                  👤 Active Users ({activeUsers.length})
-                </Typography>
-                <div className="doceditor-active-users">
-                  {activeUsers.map((u, i) => (
-                    <Chip 
-                      key={i} 
-                      label={u} 
-                      size="small" 
-                      className="doceditor-user-chip"
-                      color="success"
-                    />
-                  ))}
-                </div>
-            </div>
+              <UserPresence documentId={documentId} currentUser={user} />
           </aside>
         )}
       </div>
@@ -1561,6 +1596,9 @@ function DocumentEditor() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Document Chat */}
+      <ChatPopup documentId={documentId} username={getUsername()} />
     </div>
   );
 }

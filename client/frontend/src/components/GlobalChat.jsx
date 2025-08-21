@@ -3,10 +3,11 @@ import { useChat } from '../contexts/ChatContext';
 import './GlobalChat.css';
 
 function GlobalChat() {
-  const { messages, sendMessage, isConnected, username, isAuthenticated } = useChat();
+  const { messages, sendMessage, isConnected, username, isAuthenticated, typingUsers, startTyping, stopTyping } = useChat();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const messagesEndRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
   // Always call hooks at the top level
   React.useEffect(() => {
@@ -18,10 +19,36 @@ function GlobalChat() {
     return null;
   }
 
+  const handleInputChange = (e) => {
+    setInput(e.target.value);
+    
+    // Emit typing start
+    if (isConnected) {
+      startTyping();
+    }
+
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Set timeout to stop typing indicator
+    typingTimeoutRef.current = setTimeout(() => {
+      if (isConnected) {
+        stopTyping();
+      }
+    }, 1000);
+  };
+
   const handleSend = () => {
     if (input.trim()) {
       sendMessage(input);
       setInput('');
+      
+      // Stop typing indicator
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
     }
   };
 
@@ -30,6 +57,14 @@ function GlobalChat() {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const getTypingIndicatorText = () => {
+    const typingArray = Array.from(typingUsers);
+    if (typingArray.length === 0) return null;
+    if (typingArray.length === 1) return `${typingArray[0]} is typing...`;
+    if (typingArray.length === 2) return `${typingArray[0]} and ${typingArray[1]} are typing...`;
+    return `${typingArray[0]} and ${typingArray.length - 1} others are typing...`;
   };
 
   return (
@@ -68,6 +103,16 @@ function GlobalChat() {
               </div>
             ))
           )}
+          {getTypingIndicatorText() && (
+            <div className="typing-indicator">
+              <span className="typing-text">{getTypingIndicatorText()}</span>
+              <span className="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+              </span>
+            </div>
+          )}
           <div ref={messagesEndRef} />
         </div>
         
@@ -75,7 +120,7 @@ function GlobalChat() {
           <input
             className="global-chat-input"
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             placeholder="Type a message..."
             disabled={!isConnected}

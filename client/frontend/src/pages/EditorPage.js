@@ -176,9 +176,9 @@ const handleExportToWord = async () => {
     if (socket && documentId) {
       const username = getUsername();
       socket.emit("join-document", { documentId, username });
-      socket.on("user-list", (users) => {
-        setActiveUsers(users);
-      });
+          socket.on("user-list-simple", (users) => {
+      setActiveUsers(users);
+    });
     }
   }, [socket, documentId]);
 
@@ -265,6 +265,53 @@ const handleExportToWord = async () => {
     
     socket.on("remote-cursor", handleRemoteCursor);
     return () => socket.off("remote-cursor", handleRemoteCursor);
+  }, [socket]);
+
+  // Listen for imported content from other users
+  useEffect(() => {
+    if (!socket) return;
+
+    let chunkedContent = '';
+    let expectedChunks = 0;
+    let receivedChunks = 0;
+
+    const handleReceiveImportedContent = (content) => {
+      console.log(`📥 Received imported content, length: ${content.length} characters`);
+      setQuillValue(content);
+    };
+
+    const handleImportContentStart = ({ totalChunks, totalSize }) => {
+      console.log(`📦 Starting to receive ${totalChunks} chunks, total size: ${totalSize} characters`);
+      chunkedContent = '';
+      expectedChunks = totalChunks;
+      receivedChunks = 0;
+    };
+
+    const handleImportContentChunk = ({ chunk, index, totalChunks }) => {
+      console.log(`📦 Received chunk ${index + 1}/${totalChunks}, size: ${chunk.length} characters`);
+      chunkedContent += chunk;
+      receivedChunks++;
+    };
+
+    const handleImportContentComplete = ({ totalChunks }) => {
+      console.log(`✅ Received all ${totalChunks} chunks, total content length: ${chunkedContent.length} characters`);
+      setQuillValue(chunkedContent);
+      chunkedContent = '';
+      expectedChunks = 0;
+      receivedChunks = 0;
+    };
+
+    socket.on('receive-imported-content', handleReceiveImportedContent);
+    socket.on('import-content-start', handleImportContentStart);
+    socket.on('import-content-chunk', handleImportContentChunk);
+    socket.on('import-content-complete', handleImportContentComplete);
+    
+    return () => {
+      socket.off('receive-imported-content', handleReceiveImportedContent);
+      socket.off('import-content-start', handleImportContentStart);
+      socket.off('import-content-chunk', handleImportContentChunk);
+      socket.off('import-content-complete', handleImportContentComplete);
+    };
   }, [socket]);
 
   // Clean up old remote cursors (older than 10 seconds)
@@ -443,7 +490,58 @@ const handleExportToWord = async () => {
 
     const files = Array.from(e.dataTransfer.files);
     const imageFiles = files.filter(file => file.type.startsWith('image/'));
+    const documentFiles = files.filter(file => 
+      file.name.endsWith('.docx') || file.name.endsWith('.html')
+    );
 
+    // Handle document imports
+    if (documentFiles.length > 0) {
+      try {
+        setUploadStatus('uploading');
+        console.log(`📄 Processing ${documentFiles.length} document file(s)`);
+        
+        for (const file of documentFiles) {
+          console.log(`📄 Importing document: ${file.name}, size: ${file.size} bytes`);
+          let importedContent = '';
+
+          if (file.name.endsWith('.docx')) {
+            const mammoth = await import('mammoth');
+            const arrayBuffer = await file.arrayBuffer();
+            const result = await mammoth.convertToHtml({ arrayBuffer });
+            importedContent = result.value;
+            console.log(`✅ DOCX converted, content length: ${importedContent.length}`);
+          } else if (file.name.endsWith('.html')) {
+            const reader = new FileReader();
+            importedContent = await new Promise((resolve, reject) => {
+              reader.onload = (evt) => resolve(evt.target.result);
+              reader.onerror = reject;
+              reader.readAsText(file);
+            });
+            console.log(`✅ HTML loaded, content length: ${importedContent.length}`);
+          }
+
+          if (importedContent) {
+            setQuillValue(importedContent);
+            
+            // Broadcast to other users
+            if (socket) {
+              console.log(`📤 Broadcasting imported document to other users...`);
+              socket.emit('import-content', { documentId, content: importedContent });
+            }
+          }
+        }
+
+        setUploadStatus('success');
+        setTimeout(() => setUploadStatus(null), 3000);
+      } catch (error) {
+        console.error('Error importing document:', error);
+        setUploadStatus('error');
+        setTimeout(() => setUploadStatus(null), 3000);
+      }
+      return;
+    }
+
+    // Handle image uploads
     if (imageFiles.length === 0) {
       setUploadStatus('error');
       setTimeout(() => setUploadStatus(null), 3000);
@@ -594,20 +692,20 @@ const handleExportToWord = async () => {
         </div>
         
         {/* Drag and Drop Hint */}
-        <Box sx={{ 
-          mb: 2, 
-          p: 1, 
-          bgcolor: 'info.light', 
-          borderRadius: 1,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1,
-          fontSize: '0.8rem'
-        }}>
-          <Typography variant="caption" color="info.contrastText">
-            💡 Tip: Drag and drop images directly into the editor to embed them
-          </Typography>
-        </Box>
+                 <Box sx={{ 
+           mb: 2, 
+           p: 1, 
+           bgcolor: 'info.light', 
+           borderRadius: 1,
+           display: 'flex',
+           alignItems: 'center',
+           gap: 1,
+           fontSize: '0.8rem'
+         }}>
+           <Typography variant="caption" color="info.contrastText">
+             💡 Tip: Drag and drop images, .docx, or .html files directly into the editor to import them
+           </Typography>
+         </Box>
         <div 
           className="editor-quill-box"
           onDragOver={handleDragOver}
@@ -646,20 +744,20 @@ const handleExportToWord = async () => {
                 border: '2px dashed #fff'
               }}
             >
-              <Box
-                sx={{
-                  textAlign: 'center',
-                  color: 'white',
-                  p: 3
-                }}
-              >
-                <Typography variant="h6" sx={{ mb: 1 }}>
-                  Drop Images Here
-                </Typography>
-                <Typography variant="body2">
-                  Drag and drop image files to embed them in the document
-                </Typography>
-              </Box>
+                             <Box
+                 sx={{
+                   textAlign: 'center',
+                   color: 'white',
+                   p: 3
+                 }}
+               >
+                 <Typography variant="h6" sx={{ mb: 1 }}>
+                   Drop Files Here
+                 </Typography>
+                 <Typography variant="body2">
+                   Drag and drop images, .docx, or .html files to import them
+                 </Typography>
+               </Box>
             </Box>
           )}
         </div>

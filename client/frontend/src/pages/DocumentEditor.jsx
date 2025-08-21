@@ -46,6 +46,8 @@ import {
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
+import ChatPopup from './ChatPopup';
+import UserList from '../components/UserList';
 
 function DocumentEditor() {
   const { id: documentId } = useParams();
@@ -63,6 +65,7 @@ function DocumentEditor() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null);
   const [remoteCursors, setRemoteCursors] = useState({}); // Store remote cursors by user ID
+  const [userListOpen, setUserListOpen] = useState(false);
   const socketRef = useRef(null);
   const quillRef = useRef(null);
   const [exportAnchorEl, setExportAnchorEl] = useState(null);
@@ -1551,6 +1554,9 @@ function DocumentEditor() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Document-specific Chat */}
+      <ChatPopup documentId={documentId} username={getUsername()} />
     </div>
   );
 }

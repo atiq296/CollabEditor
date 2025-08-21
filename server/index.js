@@ -133,6 +133,58 @@ io.on('connection', (socket) => {
     io.to('chat-' + documentId).emit('chat-message', { user, text, time });
     console.log(`💬 [${documentId}] ${user}: ${text}`);
   });
+
+  // Typing indicators for document chat
+  socket.on('typing-start', ({ documentId, username }) => {
+    socket.to('chat-' + documentId).emit('user-typing', { username, isTyping: true });
+    console.log(`⌨️ ${username} started typing in ${documentId}`);
+  });
+
+  socket.on('typing-stop', ({ documentId, username }) => {
+    socket.to('chat-' + documentId).emit('user-typing', { username, isTyping: false });
+    console.log(`⌨️ ${username} stopped typing in ${documentId}`);
+  });
+
+  // Typing indicators for global chat
+  socket.on('global-typing-start', ({ username }) => {
+    socket.to('global-chat').emit('global-user-typing', { username, isTyping: true });
+    console.log(`⌨️ ${username} started typing in global chat`);
+  });
+
+  socket.on('global-typing-stop', ({ username }) => {
+    socket.to('global-chat').emit('global-user-typing', { username, isTyping: false });
+    console.log(`⌨️ ${username} stopped typing in global chat`);
+  });
+
+  // --- Private Messaging handlers ---
+  socket.on('join-private-chat', ({ fromUser, toUser }) => {
+    const roomId = [fromUser, toUser].sort().join('-');
+    socket.join('private-' + roomId);
+    console.log(`🔒 ${fromUser} joined private chat with ${toUser} (room: ${roomId})`);
+  });
+
+  socket.on('private-message', ({ fromUser, toUser, text, time }) => {
+    const roomId = [fromUser, toUser].sort().join('-');
+    const message = { fromUser, toUser, text, time, timestamp: new Date() };
+    
+    // Emit to both users in the private room
+    io.to('private-' + roomId).emit('private-message', message);
+    console.log(`🔒 [${roomId}] ${fromUser} -> ${toUser}: ${text}`);
+  });
+
+  socket.on('private-typing-start', ({ fromUser, toUser }) => {
+    const roomId = [fromUser, toUser].sort().join('-');
+    socket.to('private-' + roomId).emit('private-user-typing', { username: fromUser, isTyping: true });
+    console.log(`🔒⌨️ ${fromUser} started typing to ${toUser}`);
+  });
+
+  socket.on('private-typing-stop', ({ fromUser, toUser }) => {
+    const roomId = [fromUser, toUser].sort().join('-');
+    socket.to('private-' + roomId).emit('private-user-typing', { username: fromUser, isTyping: false });
+    console.log(`🔒⌨️ ${fromUser} stopped typing to ${toUser}`);
+  });
+  // --- End Private Messaging handlers ---
+
   // --- End Document Chat handlers ---
 
   socket.on('send-changes', ({ documentId, delta }) => {

@@ -15,7 +15,9 @@ export const ChatProvider = ({ children }) => {
   const [messages, setMessages] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
   const [username, setUsername] = useState('');
+  const [typingUsers, setTypingUsers] = useState([]);
   const socketRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
   // Get username from token
   const getUsername = () => {
@@ -64,6 +66,17 @@ export const ChatProvider = ({ children }) => {
       setMessages(prev => [...prev, msg]);
     });
 
+    // Handle global typing indicators
+    socket.on('global-user-typing', ({ username: typingUser, isTyping }) => {
+      setTypingUsers(prev => {
+        if (isTyping) {
+          return prev.includes(typingUser) ? prev : [...prev, typingUser];
+        } else {
+          return prev.filter(user => user !== typingUser);
+        }
+      });
+    });
+
     // Load chat history
     fetch('http://localhost:5000/api/chat/history', {
       headers: {
@@ -97,8 +110,33 @@ export const ChatProvider = ({ children }) => {
 
     socketRef.current.emit('global-chat-message', message);
     
+    // Stop typing indicator when sending message
+    socketRef.current.emit('global-typing-stop', { username });
+    clearTimeout(typingTimeoutRef.current);
+    
     // Optimistically add to local state
     setMessages(prev => [...prev, message]);
+  };
+
+  const handleTypingStart = () => {
+    if (!isConnected || !username) return;
+    
+    socketRef.current.emit('global-typing-start', { username });
+    
+    // Clear previous timeout
+    clearTimeout(typingTimeoutRef.current);
+    
+    // Set timeout to stop typing indicator after 3 seconds of inactivity
+    typingTimeoutRef.current = setTimeout(() => {
+      socketRef.current.emit('global-typing-stop', { username });
+    }, 3000);
+  };
+
+  const handleTypingStop = () => {
+    if (!isConnected || !username) return;
+    
+    socketRef.current.emit('global-typing-stop', { username });
+    clearTimeout(typingTimeoutRef.current);
   };
 
   const clearMessages = () => {
@@ -111,7 +149,10 @@ export const ChatProvider = ({ children }) => {
     isConnected,
     username,
     isAuthenticated: isAuthenticated(),
-    clearMessages
+    clearMessages,
+    typingUsers,
+    handleTypingStart,
+    handleTypingStop
   };
 
   return (

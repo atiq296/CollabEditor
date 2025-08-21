@@ -3,7 +3,7 @@ import { useChat } from '../contexts/ChatContext';
 import './GlobalChat.css';
 
 function GlobalChat() {
-  const { messages, sendMessage, isConnected, username, isAuthenticated } = useChat();
+  const { messages, sendMessage, isConnected, username, isAuthenticated, typingUsers, handleTypingStart, handleTypingStop } = useChat();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const messagesEndRef = useRef(null);
@@ -22,6 +22,17 @@ function GlobalChat() {
     if (input.trim()) {
       sendMessage(input);
       setInput('');
+      handleTypingStop();
+    }
+  };
+
+  const handleInputChange = (e) => {
+    setInput(e.target.value);
+    
+    if (e.target.value.trim()) {
+      handleTypingStart();
+    } else {
+      handleTypingStop();
     }
   };
 
@@ -68,6 +79,20 @@ function GlobalChat() {
               </div>
             ))
           )}
+          {typingUsers && typingUsers.length > 0 && (
+            <div className="global-chat-typing-indicator">
+              <span className="typing-text">
+                {typingUsers.length === 1 
+                  ? `${typingUsers[0]} is typing...` 
+                  : `${typingUsers.join(', ')} are typing...`}
+              </span>
+              <div className="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+          )}
           <div ref={messagesEndRef} />
         </div>
         
@@ -75,7 +100,7 @@ function GlobalChat() {
           <input
             className="global-chat-input"
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             placeholder="Type a message..."
             disabled={!isConnected}

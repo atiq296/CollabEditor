@@ -14,12 +14,14 @@ const io = new Server(server, {
   cors: {
     origin: '*',
     methods: ['GET', 'POST']
-  }
+  },
+  maxHttpBufferSize: 50 * 1024 * 1024 // 50MB Socket.IO buffer for large documents
 });
 
 // ✅ Middleware
 app.use(cors());
-app.use(express.json({ limit: '10mb' })); // Increase payload size limit
+app.use(express.json({ limit: '50mb' })); // Increase from 10mb to 50mb
+app.use(express.urlencoded({ limit: '50mb', extended: true })); // Add URL encoded limit
 
 // ✅ Routes
 const authRoutes = require('./routes/auth');
@@ -76,6 +78,16 @@ io.on('connection', (socket) => {
       console.error('Error saving global chat message:', err);
     }
   });
+
+  // Add typing indicator handlers
+  socket.on('typing-start', ({ username }) => {
+    socket.to('global-chat').emit('user-typing', { username, isTyping: true });
+  });
+
+  socket.on('typing-stop', ({ username }) => {
+    socket.to('global-chat').emit('user-typing', { username, isTyping: false });
+  });
+
   // --- End Global Chat handlers ---
 
   // --- Document Chat handlers ---
@@ -108,15 +120,52 @@ io.on('connection', (socket) => {
   });
 
   socket.on('import-content', ({ documentId, content }) => {
+    // Check content size and log for monitoring
+    const contentSize = Buffer.byteLength(content, 'utf8');
+    console.log(`📄 Importing content for ${documentId}, size: ${(contentSize / 1024 / 1024).toFixed(2)}MB`);
+    
     // Broadcast imported content to all users in the document
     io.to(documentId).emit('receive-imported-content', content);
     console.log(`📄 Imported content broadcasted for ${documentId}`);
   });
 
   socket.on('update-document', ({ documentId, content }) => {
+    // Check content size and log for monitoring
+    const contentSize = Buffer.byteLength(content, 'utf8');
+    console.log(`📄 Updating document ${documentId}, size: ${(contentSize / 1024 / 1024).toFixed(2)}MB`);
+    
     // Broadcast the updated document content to all users in the document
     io.to(documentId).emit('document-updated', content);
     console.log(`📄 Document updated for ${documentId}`);
+  });
+
+  // Add real-time comment handlers
+  socket.on('add-comment', async ({ documentId, comment }) => {
+    try {
+      // Save comment to database
+      const Document = require('./models/Document');
+      const doc = await Document.findById(documentId);
+      if (!doc) {
+        console.log(`❌ Document not found for comment: ${documentId}`);
+        return;
+      }
+
+      doc.comments.push(comment);
+      await doc.save();
+
+      // Populate author info for the new comment
+      const User = require('./models/User');
+      const populatedComment = await Document.populate(doc.comments[doc.comments.length - 1], {
+        path: 'author',
+        select: 'name'
+      });
+
+      // Broadcast the new comment to all users in the document
+      io.to(documentId).emit('new-comment', populatedComment);
+      console.log(`💬 New comment added to ${documentId} by ${comment.author}`);
+    } catch (err) {
+      console.error('Error adding comment:', err);
+    }
   });
 
   socket.on('disconnect', () => {

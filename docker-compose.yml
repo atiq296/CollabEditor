@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # Frontend service
+  frontend:
+    image: atiq296/collabeditor-frontend:latest
+    ports:
+      - "3000:80"
+    env_file:
+      - ./client/frontend/.env
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - collab-network
+
+  # Backend service
+  backend:
+    image: atiq296/collabeditor-backend:latest
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./server/.env
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - collab-network
+    volumes:
+      - uploads:/app/uploads
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    networks:
+      - collab-network
+    volumes:
+      - redis-data:/data
+
+networks:
+  collab-network:
+    driver: bridge
+
+volumes:
+  uploads:
+    driver: local
+  redis-data:
+    driver: local

@@ -16,7 +16,9 @@ export const ChatProvider = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [username, setUsername] = useState('');
   const [authToken, setAuthToken] = useState(localStorage.getItem('token'));
+  const [typingUsers, setTypingUsers] = useState(new Set());
   const socketRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
   // Get username from token
   const getUsernameFromToken = (token) => {
@@ -53,6 +55,7 @@ export const ChatProvider = ({ children }) => {
       setMessages([]);
       setIsConnected(false);
       setUsername('');
+      setTypingUsers(new Set());
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;
@@ -80,6 +83,25 @@ export const ChatProvider = ({ children }) => {
 
     socket.on('global-chat-message', (msg) => {
       setMessages(prev => [...prev, msg]);
+      // Remove typing indicator when message is sent
+      setTypingUsers(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(msg.user);
+        return newSet;
+      });
+    });
+
+    // Handle typing indicators
+    socket.on('user-typing', ({ username, isTyping }) => {
+      setTypingUsers(prev => {
+        const newSet = new Set(prev);
+        if (isTyping) {
+          newSet.add(username);
+        } else {
+          newSet.delete(username);
+        }
+        return newSet;
+      });
     });
 
     // Load chat history
@@ -119,6 +141,23 @@ export const ChatProvider = ({ children }) => {
     setMessages(prev => [...prev, message]);
   };
 
+  const handleTyping = () => {
+    if (!isConnected || !username) return;
+
+    // Emit typing start
+    socketRef.current.emit('typing-start', { username });
+
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Set timeout to stop typing indicator
+    typingTimeoutRef.current = setTimeout(() => {
+      socketRef.current.emit('typing-stop', { username });
+    }, 2000); // Stop typing indicator after 2 seconds of inactivity
+  };
+
   const clearMessages = () => {
     setMessages([]);
   };
@@ -129,7 +168,9 @@ export const ChatProvider = ({ children }) => {
     isConnected,
     username,
     isAuthenticated,
-    clearMessages
+    clearMessages,
+    typingUsers,
+    handleTyping
   };
 
   return (

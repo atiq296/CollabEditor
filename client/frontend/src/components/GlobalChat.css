@@ -219,6 +219,53 @@
   transform: none;
 }
 
+/* Add typing indicator styles */
+.global-chat-typing {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #666;
+  font-style: italic;
+}
+
+.typing-dots {
+  display: inline-flex;
+  margin-right: 8px;
+}
+
+.typing-dots span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: #666;
+  margin: 0 1px;
+  animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-dots span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.typing-dots span:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes typing {
+  0%, 80%, 100% {
+    opacity: 0.2;
+    transform: scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.typing-text {
+  color: #666;
+}
+
 @media (max-width: 500px) {
   .global-chat-popup {
     width: 98vw;

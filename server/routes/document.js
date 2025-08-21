@@ -271,7 +271,19 @@ router.post('/:id/comment', authMiddleware, async (req, res) => {
     await doc.save();
 
     const addedComment = doc.comments[doc.comments.length - 1];
-    res.status(201).json(addedComment);
+    
+    // Populate author info
+    await doc.populate('comments.author', 'name');
+    const populatedComment = doc.comments[doc.comments.length - 1];
+    
+    // Emit real-time update to all users in the document
+    const io = require('socket.io');
+    const server = require('../index');
+    if (server && server.io) {
+      server.io.to(req.params.id).emit('new-comment', populatedComment);
+    }
+    
+    res.status(201).json(populatedComment);
   } catch (err) {
     res.status(500).json({ message: "Failed to add comment", error: err.message });
   }

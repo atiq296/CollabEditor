@@ -376,27 +376,38 @@ const handleExportToWord = async () => {
     return () => quill.off("selection-change", handleSelectionChange);
   }, []);
 
+  // Add real-time comment listener
+  useEffect(() => {
+    const socket = socket;
+    if (!socket) return;
+
+    const handleNewComment = (newComment) => {
+      setComments(prev => [...prev, newComment]);
+    };
+
+    socket.on('new-comment', handleNewComment);
+    return () => socket.off('new-comment', handleNewComment);
+  }, [socket]);
+
   const handleCommentSubmit = async () => {
     const token = getToken();
-    await fetch(`http://localhost:5000/api/document/${documentId}/comment`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ text: newCommentText, position: selectedRange }),
-    });
-    setComments((prev) => [
-      ...prev,
-      {
-        text: newCommentText,
-        author: { name: getUsername() },
-        position: selectedRange,
-        createdAt: new Date().toISOString(),
-      },
-    ]);
-    setNewCommentText("");
-    setShowCommentModal(false);
+    try {
+      const res = await fetch(`http://localhost:5000/api/document/${documentId}/comment`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ text: newCommentText, position: selectedRange }),
+      });
+      if (res.ok) {
+        // Don't add to local state here - it will come through real-time
+        setNewCommentText("");
+        setShowCommentModal(false);
+      }
+    } catch (err) {
+      console.error('Error adding comment:', err);
+    }
   };
 
   const handleShare = async () => {

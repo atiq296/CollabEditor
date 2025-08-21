@@ -399,6 +399,19 @@ function DocumentEditor() {
     return () => socket.off('receive-changes', handler);
   }, [socketRef, quillRef]);
 
+  // Add real-time comment listener
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket) return;
+
+    const handleNewComment = (newComment) => {
+      setComments(prev => [...prev, newComment]);
+    };
+
+    socket.on('new-comment', handleNewComment);
+    return () => socket.off('new-comment', handleNewComment);
+  }, [socketRef]);
+
   // --- Move fetchVersions here ---
   const fetchVersions = async () => {
     setVersionLoading(true);
@@ -693,8 +706,8 @@ function DocumentEditor() {
         });
         if (res.ok) {
           const savedComment = await res.json();
-          setComments([...comments, savedComment]);
-      setNewComment('');
+          // Don't add to local state here - it will come through real-time
+          setNewComment('');
           setCommentStatus('success');
         } else {
           setCommentStatus('error');
@@ -746,7 +759,7 @@ function DocumentEditor() {
         });
         if (res.ok) {
           const savedComment = await res.json();
-          setComments([...comments, savedComment]);
+          // Don't add to local state here - it will come through real-time
           setInlineCommentText('');
           setSelectedRange(null);
           setSelectedText('');

@@ -12,16 +12,16 @@ const DocumentSchema = new mongoose.Schema({
     }
   ],
   versions: [
-  {
-    content: String,
-    title: String,
-    savedAt: Date,
-    savedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
+    {
+      content: String,
+      title: String,
+      savedAt: Date,
+      savedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      }
     }
-  }
-],
+  ],
   comments: [
     {
       text: String,
@@ -41,5 +41,8 @@ const DocumentSchema = new mongoose.Schema({
     updatedAt: { type: Date, default: Date.now }
   }
 }, { timestamps: true });
+
+// Add index for better performance with large documents
+DocumentSchema.index({ createdBy: 1, updatedAt: -1 });
 
 module.exports = mongoose.model('Document', DocumentSchema);
